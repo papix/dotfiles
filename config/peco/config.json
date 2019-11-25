@@ -1,0 +1,22 @@
+{
+    "keymap": {
+        "C-j": "peco.SelectDown",
+        "C-k": "peco.SelectUp",
+        "C-v": "peco.ToggleSelectionAndSelectNext",
+        "C-c": "peco.Cancel"
+    },
+    "style": {
+        "Selected": [
+            "underline"
+        ],
+        "Matched": [
+            "bold",
+            "red"
+        ],
+        "SavedSelection": [
+            "bold",
+            "on_blue",
+            "black"
+        ]
+    }
+}

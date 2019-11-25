@@ -1,0 +1,74 @@
+########################################
+# PATH
+########################################
+export GOPATH="${HOME}/.ghq"
+export GOBIN="${GOPATH}/bin"
+
+########################################
+# Tools
+########################################
+
+# config
+export XDG_CONFIG_HOME="${HOME}/.config"
+export XDG_DATA_HOME="${HOME}/.local/share"
+
+# LANG
+export LANGUAGE=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# ls
+export LSCOLORS=exfxcxdxbxegedabagacad
+export LS_COLORS='di=34:ln=35:so=32:pi=33:ex=31:bd=46;34:cd=43;34:su=41;30:sg=46;30:tw=42;30:ow=43;30'
+
+# zsh
+export HISTFILE="${HOME}/.zsh_history"
+export HISTSIZE=10000000
+export SAVEHIST=${HISTSIZE}
+
+# editor
+if which cursor > /dev/null; then
+    # Cursor
+    export EDITOR='cursor' 
+    export GIT_EDITOR='cursor --wait'
+else
+    # VSCode
+    export EDITOR='code' 
+    export GIT_EDITOR='code --wait'
+fi
+
+
+
+# pager
+export LESS='-FRX'
+
+# Perl
+export PERL_RL='EditLine'
+
+########################################
+# Environment
+########################################
+
+if ( test "$CODESPACES" = "true" ); then
+    # Codespacesの場合
+    export TERM="xterm-256color"
+    export SHELL="/usr/bin/zsh"
+
+    export VSCODE_IPC_HOOK_CLI="/tmp/$(ls /tmp -t | grep 'vscode-ipc' | head -n 1)"
+else
+    # Codespaces ではない場合
+    export TERM="tmux-256color"
+
+    typeset -gx -U path
+    path=(
+        ${GOBIN}
+        ${path}
+    )
+fi
+
+if [ -f "/proc/version" ] && ( grep -q -i "microsoft" /proc/version ); then
+    # WSL2 の場合
+    # XXX: 何故か WSL_DISTRO_NAME が反映されていないことがある。WSL2で動いている場合は「Ubuntu」をセットしておく
+    export WSL_DISTRO_NAME=Ubuntu
+    # XXX: 何故か ~/.vscode-server/bin へのパスが通っていて、Windows側の code が使えないときがあるので、 ~/.vscode-server/bin のパスを消す
+    export PATH=$(echo $PATH | tr ':' '\n' | grep -v "/.vscode-server/bin/" | tr '\n' ':' | sed 's/:$//')
+fi

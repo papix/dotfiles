@@ -1,0 +1,8 @@
+set line-graphics = ascii
+set diff-options = -m --first-parent
+set vertical-split = no
+set split-view-height = 80%
+set diff-context = 5
+
+bind generic G move-last-line
+bind generic P @open-pull-request-from-commit %(commit)

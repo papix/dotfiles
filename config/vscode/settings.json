@@ -1,0 +1,139 @@
+{
+    "editor.detectIndentation": false,
+    "editor.fontFamily": "'HackGen Console NF'",
+    "editor.fontSize": 14,
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.minimap.enabled": false,
+    "editor.renderControlCharacters": true,
+    "editor.renderWhitespace": "boundary",
+    "editor.wordWrap": "on",
+    "editor.wrappingIndent": "none",
+    "terminal.integrated.defaultProfile.linux": "zsh",
+    "terminal.integrated.fontFamily": "'HackGen Console NF'",
+    "terminal.integrated.fontSize": 14,
+    "vim.useSystemClipboard": true,
+    "vim.whichwrap": "h,l,<,>,[,]",
+    "workbench.colorTheme": "Solarized Dark",
+    "workbench.editor.enablePreview": false,
+    "vim.hlsearch": true,
+    "vim.insertModeKeyBindings": [
+        {
+            "before": [
+                "j",
+                "j"
+            ],
+            "after": [
+                "<Esc>"
+            ],
+        }
+    ],
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "J"
+            ],
+            "after": [
+                "1",
+                "0",
+                "j"
+            ]
+        },
+        {
+            "before": [
+                "K"
+            ],
+            "after": [
+                "1",
+                "0",
+                "k"
+            ]
+        },
+        {
+            "before": [
+                "<C-h>"
+            ],
+            "commands": [
+                {
+                    "command": ":noh"
+                }
+            ]
+        }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                ">"
+            ],
+            "after": [
+                ">",
+                "g",
+                "v"
+            ]
+        },
+        {
+            "before": [
+                "<"
+            ],
+            "after": [
+                "<",
+                "g",
+                "v"
+            ]
+        },
+        {
+            "before": [
+                "s",
+                "s"
+            ],
+            "commands": [
+                "editor.action.sortLinesAscending",
+            ],
+        },
+        {
+            "before": [
+                "#"
+            ],
+            "after": [
+                "g",
+                "c"
+            ]
+        },
+        {
+            "before": [
+                "J"
+            ],
+            "after": [
+                "1",
+                "0",
+                "j"
+            ]
+        },
+        {
+            "before": [
+                "K"
+            ],
+            "after": [
+                "1",
+                "0",
+                "k"
+            ]
+        },
+        {
+            "before": [
+                "a",
+                "a"
+            ],
+            "commands": [
+                "alignment.alignFirst",
+            ]
+        }
+    ],
+    "remote.autoForwardPortsSource": "hybrid",
+    "[typescript]": {
+        "editor.tabSize": 2
+    },
+    "[typescriptreact]": {
+        "editor.tabSize": 2
+    }
+}

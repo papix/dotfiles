@@ -1,0 +1,100 @@
+########################################
+# Alias
+########################################
+
+# ls
+case $(uname) in
+    Darwin)
+        if which gls > /dev/null; then
+            alias ls='gls --color'
+        else
+            alias ls='ls -G'
+        fi
+        ;;
+    *)
+        alias ls='ls --color'
+esac
+
+alias ll='ls -l'
+alias la='ls -al'
+
+# git
+alias g='git'
+alias gi='git init'
+
+alias gaa='git add -A'
+alias gcl='git reset HEAD'
+alias gco='git commit'
+alias gcoa='git commit --amend'
+alias gcoe='git commit --allow-empty'
+
+alias grs='git restore --staged .'
+
+alias gb='git branch'
+alias gbd='git branch -d'
+alias gbc='git checkout -b'
+
+alias gc='git checkout'
+alias gcm='git-checkout-main'
+
+alias gme='git merge'
+alias gre='git rebase'
+
+alias gs='git status'
+alias gst='git status'
+
+alias gd='git diff'
+alias gdh='git diff HEAD~ HEAD'
+alias gbl='git blame'
+
+alias gps='git push'
+alias gpso='git push --set-upstream origin HEAD'
+alias gpsf='git push --force-with-lease'
+
+alias gf='git fetch'
+alias gpl='git pull'
+alias gplr='git pull --rebase'
+
+alias grau='git remote add upstream'
+alias gplu='git pull upstream master'
+
+# Perl
+alias cpan='cpanm'
+
+alias cm='cpanm'
+alias cmu='cpanm -U'
+alias cmi='cpanm --installdeps .'
+
+alias pr='prove'
+alias ci='carton install'
+alias ce='carton exec -- '
+alias cep='carton exec -- perl -Ilib'
+alias cepr='carton exec -- prove'
+
+if which cpandoc > /dev/null; then
+  alias perldoc='cpandoc'
+fi
+
+# etc
+alias cl='clear'
+alias pd='popd'
+
+alias ag='ag -S'
+alias tree='tree -N'
+
+if which tldr > /dev/null; then
+  alias man='tldr'
+fi
+
+if which colordiff > /dev/null; then
+  alias diff='colordiff -u'
+fi
+
+if which gsed > /dev/null; then
+  alias sed='gsed'
+fi
+
+alias vi='vim'
+
+alias gip='curl globalip.me'
+alias lo='exit 0'

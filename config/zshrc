@@ -1,0 +1,414 @@
+########################################
+# Initialize
+########################################
+
+if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
+    zcompile ~/.zshrc
+fi
+
+if ( test -f "${HOME}/.zshrc.local" ); then
+    source "${HOME}/.zshrc.local"
+fi
+
+if ( test -f "${HOME}/.zshrc.alias" ); then
+    source "${HOME}/.zshrc.alias"
+fi
+
+# homebrew
+case $(uname) in
+    Darwin)
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        ;;
+    Linux)
+        # ???
+        ;;
+esac
+
+if command -v "anyenv" > /dev/null 2>&1; then
+    eval "$(anyenv init - --no-rehash)"
+fi
+
+if command -v "direnv" > /dev/null 2>&1; then
+    eval "$(direnv hook zsh)"
+fi
+
+if command -v "brew" > /dev/null 2>&1; then
+    typeset -gx -U fpath
+    fpath=(
+        $(brew --prefix)/share/zsh/site-functions(N-/)
+        $(brew --prefix)/share/zsh-completions(N-/)
+        ${fpath}
+    )
+fi
+
+########################################
+# Color
+########################################
+
+autoload -Uz colors
+colors
+
+local DEFAULT=$'%{\e[0;0m%}'
+local RESET="%{${reset_color}%}"
+local WHITE="%{${fg[white]}%}"
+local GREEN="%{${fg[green]}%}"
+local BOLD_GREEN="%{${fg_bold[green]}%}"
+local BLUE="%{${fg[blue]}%}"
+local BOLD_BLUE="%{${fg_bold[blue]}%}"
+local RED="%{${fg[red]}%}"
+local BOLD_RED="%{${fg_bold[red]}%}"
+local CYAN="%{${fg[cyan]}%}"
+local BOLD_CYAN="%{${fg_bold[cyan]}%}"
+local YELLOW="%{${fg[yellow]}%}"
+local BOLD_YELLOW="%{${fg_bold[yellow]}%}"
+local MAGENTA="%{${fg[magenta]}%}"
+local BOLD_MAGENTA="%{${fg_bold[magenta]}%}"
+
+########################################
+# Options
+########################################
+
+# ref: http://karur4n.hatenablog.com/entry/2016/01/18/100000
+setopt no_global_rcs
+
+setopt nobeep
+setopt nolistbeep
+setopt ignoreeof
+
+bindkey -v
+
+# history
+bindkey '^k' up-line-or-history
+bindkey '^j' down-line-or-history
+
+setopt extended_history
+setopt hist_expand
+setopt hist_ignore_all_dups
+setopt hist_no_store
+setopt share_history
+setopt hist_reduce_blanks
+
+########################################
+# Completion
+########################################
+
+autoload -Uz compinit && compinit
+
+setopt auto_list
+setopt auto_menu
+setopt auto_param_slash
+setopt auto_pushd
+setopt correct
+setopt list_packed
+setopt list_types
+setopt magic_equal_subst
+setopt pushd_ignore_dups
+
+zstyle ':completion:*:default' menu select
+zstyle ':completion:*' list-separator '=>'
+zstyle ':completion:*:manuals' separate-sections true
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*:cd:*' ignore-parents parent pwd
+zstyle ':completion:*' list-colors 'di=34' 'ln=35' 'so=32' 'ex=31' 'bd=46;34' 'cd=43;34'
+
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*' completer _expand _complete _match _prefix _list _approximate
+zstyle ':completion:*:messages' format '%F{yellow}%d'${DEFAULT}
+zstyle ':completion:*:warnings' format '%F{red}No matches for:''%F{yellow} %d'${DEFAULT}
+zstyle ':completion:*:corrections' format '%F{yellow}%d ''%F{red}(errors: %e)%b'${DEFAULT}
+zstyle ':completion:*:descriptions' format '%F{yellow}completing %B%d%b'${DEFAULT}
+zstyle ':completion:*:options' description 'yes'
+zstyle ':completion:*' group-name ''
+
+########################################
+# Prompt
+########################################
+
+setopt prompt_subst
+
+autoload -Uz add-zsh-hook
+autoload -Uz vcs_info
+autoload -Uz is-at-least
+
+PROMPT="${BLUE}[%1v]${RESET} ${GREEN}%~${RESET}
+$ "
+PROMPT2='> '
+SPROMPT='"%r" is correct? ([y]es, [N]o, [a]bort, [e]dit):'
+
+precmd() {
+  psvar=()
+
+  psvar[1]='papix'
+  vcs_info
+  [[ -n "${vcs_info_msg_0_}" ]] && psvar[2]="${vcs_info_msg_0_}"
+}
+
+RPROMPT="%2(v|${GREEN}%2v${RESET}|)"
+
+# ref: http://mollifier.hatenablog.com/entry/20100906/p1
+zstyle ':vcs_info:*' enable git svn hg bzr
+
+zstyle ':vcs_info:git:*' check-for-changes true
+zstyle ':vcs_info:git:*' formats '[%b%c%u]'
+zstyle ':vcs_info:git:*' actionformats '[%b|%a%c%u]'
+zstyle ':vcs_info:git:*' stagedstr '+'
+zstyle ':vcs_info:git:*' unstagedstr '-'
+
+zstyle ':vcs_info:(svn|hg|bzr)' formats '(%s)[%b]'
+zstyle ':vcs_info:(svn|hg|bzr)' actionformats '(%s)[%b|%a]'
+zstyle ':vcs_info:(svn|bzr):*' branchformat '%b:r%r'
+zstyle ':vcs_info:bzr:*' use-simple true
+
+########################################
+# tmux
+########################################
+
+function current-workspace() {
+    pwd=$(pwd)
+    root=$(ghq root)
+
+    if [[ "${pwd}" != "${root}" && "${pwd}" == "${root}"* ]]; then
+        workspace="${pwd#$root/}"
+        arr=(${(s:/:)workspace})
+
+        service=${arr[1]}
+        user=${arr[2]}
+        repo=${arr[3]}
+
+        if [[ $service && $user && $repo ]]; then
+            if [[ $service == "github.com" ]]; then
+                echo "${user}/${repo}"
+            else
+                echo "${service}/${user}/${repo}"
+            fi
+            return
+        fi
+    fi
+    echo "default"
+}
+
+if ( which tmux > /dev/null ); then
+    workspace=$(current-workspace)
+
+    tmux_session_name="default"
+    if ( test -n "${workspace}" ); then
+        tmux_session_name=$workspace
+    fi
+
+    echo "tmux session name: $tmux_session_name"
+
+    if ( tmux has-session -t $tmux_session_name ); then
+        echo "Attache tmux session"
+        tmux attach -t $tmux_session_name && exit
+    else
+        echo "Create new tmux session."
+        tmux new -s $tmux_session_name && exit
+    fi
+fi
+
+########################################
+# cd
+########################################
+
+function cdup() {
+  echo
+  cd ..
+  zle reset-prompt
+}
+
+zle -N cdup
+bindkey '^u' cdup
+
+########################################
+# function
+########################################
+
+function epoch() {
+    if ( test -n "$1" ); then;
+        local format='+%Y-%m-%dT%H:%M:%S%z (%Z)'
+        case $(uname) in
+            Darwin)
+                date -r $1 $format
+                ;;
+            Linux)
+                date -d "@$1" $format
+                ;;
+        esac
+    else
+        date +%s
+    fi
+}
+
+function inside-git-repository() {
+    if ( git rev-parse --is-inside-work-tree > /dev/null 2>&1 ); then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function git-default-branch() {
+    default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if ( test -n "${default}" ); then
+        echo ${default}
+    else
+        echo 'master'
+    fi
+}
+
+function git-checkout-main() {
+    git checkout $(git-default-branch)
+}
+
+function git-delete-branch() {
+    (
+        default=$(git-default-branch)
+        deleted="$(git branch --merged | grep -v $default | grep -v '*')"
+        if ( test -n "${deleted}"); then
+            for branch in $(echo $deleted | tr '\n' ' '); do
+                git branch -d $branch
+            done
+        fi
+    )
+}
+
+function git-root() {
+    if ( inside-git-repository ); then
+        cd $(pwd)/$(git rev-parse --show-cdup)
+    else
+        echo "Not a git repository"
+        return 1
+    fi
+}
+zle -N git-root
+bindkey '^p' git-root
+
+stty stop undef
+
+function peco-history() {
+    BUFFER=$(history -n 1 | tac | peco --prompt 'HISTORY >' | head -n 1)
+    CURSOR="${#BUFFER}"
+    zle clear-screen
+}
+zle -N peco-history
+bindkey '^r' peco-history
+
+function peco-file() {
+    if ( test -n "${BUFFER}" ); then
+        local selected_files=$(ag -l | sort | peco --prompt 'FILE >' | tr '\n' ' ')
+        local cmd=$(echo ${BUFFER} | sed -e "s/ $//g")
+        BUFFER="${cmd} ${selected_files}"
+        CURSOR="${#BUFFER}"
+    else
+      exec ag -l | sort | peco --prompt 'FILE >' --exec "xargs -o ${EDITOR}"
+    fi
+}
+zle -N peco-file
+bindkey '^f' peco-file
+
+function peco-branch() {
+    local selected_branch=$(git branch | peco --prompt "BRANCH >" | head -n 1 | sed -e "s/^\*//g" | sed -e "s/ //g")
+    if ( test -n "${selected_branch}" ); then
+        if ( test -n "${BUFFER}" ); then
+            local cmd=$(echo ${BUFFER} | sed -e "s/ $//g")
+            BUFFER="${cmd} ${selected_branch}"
+            CURSOR="${#BUFFER}"
+        else
+            BUFFER="git checkout ${selected_branch}"
+            zle accept-line
+        fi
+    fi
+}
+zle -N peco-branch
+bindkey '^b' peco-branch
+
+function pero() {
+    if [[ "${EDITOR}" = "code" || "${EDITOR}" = "cursor" ]]; then
+        exec ag "${@}" . | peco --exec 'head -n 1 | awk -F : '"'"'{print "-g " $1 ":" $2}'"'"' | xargs -o ${EDITOR}'
+    else
+        exec ag "${@}" . | peco --exec 'head -n 1 | awk -F : '"'"'{print "+" $2 " " $1}'"'"' | xargs -o ${EDITOR}'
+    fi
+}
+
+function peco-git-add() {
+    (
+        git-root
+        selected="$(git status -uall --porcelain -s | peco | awk -F ' ' '{print $NF}')"
+        if ( test -n "${selected}"); then
+            echo "Added:"
+            for file in $(echo $selected | tr '\n' ' '); do
+                echo $file
+                git add $file
+            done
+        fi
+    )
+}
+alias ga='peco-git-add'
+
+if ( test "$CODESPACES" = "true" ); then
+    # Codespaces で使う関数
+    function force-reload() {
+        (
+            # dotfiles を fetch して、強制的に origin/master を向ける
+            # （dotfilesをCodespace上でいじっていた場合、揮発するので注意）
+            cd /workspaces/.codespaces/.persistedshare/dotfiles
+            git fetch
+            git reset --hard origin/master
+
+            ./setup.sh
+        )
+
+        # 設定のリロード
+        source ~/.zshrc
+        tmux source-file ~/.tmux.conf
+    }
+else
+    # Codespaces で不要な関数
+    function peco-ssh() {
+        local target=$(grep -h "^\s*Host " ${HOME}/.ssh/config $(find ${HOME}/.ssh/conf.d -type f 2>/dev/null) | grep -v "*" | sed s/"[\s ]*Host "// | sort | peco --prompt 'HOST >' | head -n 1)
+        ssh ${target}
+    }
+    alias ss='peco-ssh'
+
+    function peco-src() {
+    local selected_repos=$(ghq list --full-path | roots | peco --prompt 'REPOSITORY >' | head -n 1)
+    if ( test -n "$selected_repos" ); then
+        BUFFER="cd ${selected_repos}"
+        zle accept-line
+        zle clear-screen
+    fi
+    }
+    zle -N peco-src
+    bindkey '^s' peco-src
+fi
+
+function copy-to-clipboard() {
+    if ( test "$#" = 0 ); then
+        payload=$(cat -)
+    else
+        payload=$(echo -n "$1")
+    fi
+
+    b64_payload=$(printf "%s" "$payload" | base64 -w0)
+
+    # OSC52
+    printf "\e]52;c;%s\a" "$b64_payload"
+}
+
+function vim() {
+    if ( ! test -f $1 ); then
+        if ( test -e $1 ); then
+            echo "$1 is not a file"
+        else
+            echo "$1 is not exists"
+        fi
+        return 1;
+    fi
+
+    echo "Open by vim? [y/N]"
+    if read -q -s; then
+        command vim $1
+    else
+        $EDITOR $1
+    fi
+}

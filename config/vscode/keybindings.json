@@ -1,0 +1,199 @@
+// Place your key bindings in this file to override the defaults
+[
+  // Quick Open
+  // - Ctrl + o でQuickOpen開閉
+  {
+    "key": "ctrl+o",
+    "command": "workbench.action.quickOpen",
+    "when": "!inQuickOpen",
+  },
+  {
+    "key": "ctrl+o",
+    "command": "workbench.action.closeQuickOpen",
+    "when": "inQuickOpen",
+  },
+  // - Ctrl + j/kで上下移動
+  {
+    "key": "ctrl+j",
+    "command": "workbench.action.quickOpenSelectNext",
+    "when": "inQuickOpen",
+  },
+  {
+    "key": "ctrl+k",
+    "command": "workbench.action.quickOpenSelectPrevious",
+    "when": "inQuickOpen",
+  },
+  // 補完
+  // - ctrl + j で移動
+  {
+    "key": "ctrl+j",
+    "command": "selectNextSuggestion",
+    "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+  },
+  // - ctrl + j で上移動
+  {
+    "key": "ctrl+k",
+    "command": "selectPrevSuggestion",
+    "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+  },
+  // 操作体験をtmux風にする
+  // - prefix + s/v でeditorを縦/横分割
+  {
+    "key": "ctrl+q s",
+    "command": "workbench.action.newGroupBelow",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  {
+    "key": "ctrl+q v",
+    "command": "workbench.action.newGroupRight",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  // - prefix + h/j/k/l でeditorを左/下/上/右に移動
+  {
+    "key": "ctrl+q h",
+    "command": "workbench.action.focusLeftGroup",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  {
+    "key": "ctrl+q j",
+    "command": "workbench.action.focusBelowGroup",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  {
+    "key": "ctrl+q k",
+    "command": "workbench.action.focusAboveGroup",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  {
+    "key": "ctrl+q l",
+    "command": "workbench.action.focusRightGroup",
+    "when": "editorFocus || activeEditorGroupEmpty",
+  },
+  {
+    "key": "ctrl+q shift+h",
+    "command": "workbench.action.increaseViewSize",
+    "when": "editorFocus"
+  },
+  {
+    "key": "ctrl+q shift+l",
+    "command": "workbench.action.decreaseViewSize",
+    "when": "editorFocus"
+  },
+  // - prefix + b/n でeditor内の前/次のファイルにフォーカス
+  {
+    "key": "ctrl+q b",
+    "command": "workbench.action.previousEditorInGroup",
+    "when": "editorFocus",
+  },
+  {
+    "key": "ctrl+q n",
+    "command": "workbench.action.nextEditorInGroup",
+    "when": "editorFocus",
+  },
+  // - prefix + d で今フォーカスしているeditorをclose
+  {
+    "key": "ctrl+q d",
+    "command": "workbench.action.closeActiveEditor",
+    "when": "editorFocus",
+  },
+  // - prefix + d で何もeditorを開いていない場合にeditorグループを閉じる
+  {
+    "key": "ctrl+q d",
+    "command": "workbench.action.closeGroup",
+    "when": "activeEditorGroupEmpty && multipleEditorGroups",
+  },
+  // その他
+  // - sidebarを開閉
+  {
+    "key": "ctrl+shift+a",
+    "command": "workbench.action.toggleSidebarVisibility",
+  },
+  {
+    "key": "ctrl+shift+f",
+    "command": "search.action.openNewEditor"
+  },
+  // - 定義へジャンプ
+  {
+    "key": "ctrl+j",
+    "command": "editor.action.revealDefinition",
+    "when": "editorLangId != typescript && editorLangId != typescriptreact",
+  },
+  {
+    "key": "ctrl+j",
+    "command": "typescript.goToSourceDefinition",
+    "when": "editorLangId == typescript || editorLangId == typescriptreact",
+  },
+  // Terminal関連
+  // editorとterminalとの切り替え
+  {
+    "key": "ctrl+d",
+    "command": "workbench.action.terminal.toggleTerminal",
+  },
+  {
+    "key": "ctrl+d",
+    "command": "workbench.action.focusFirstEditorGroup",
+    "when": "terminalFocus",
+  },
+  // terminal を拡大
+  {
+    "key": "ctrl+shift+s",
+    "command": "workbench.action.toggleMaximizedPanel",
+    "when": "terminalFocus",
+  },
+  // Ctrl + Shift + dでterminalを閉じる
+  {
+    "key": "ctrl+shift+d",
+    "command": "workbench.action.closePanel",
+  },
+  // terminal に そのまま送る
+  {
+    "key": "ctrl+q",
+    "command": "ctrl+q",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+h",
+    "command": "ctrl+h",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+j",
+    "command": "ctrl+j",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+k",
+    "command": "ctrl+k",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+l",
+    "command": "ctrl+l",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+v",
+    "command": "ctrl+v",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+s",
+    "command": "ctrl+s",
+    "when": "terminalFocus"
+  },
+  // folding
+  {
+    "key": "ctrl+f ctrl+f",
+    "command": "editor.toggleFold",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+  {
+    "key": "cmd+r cmd+l",
+    "command": "-editor.toggleFold",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+  {
+    "key": "cmd+i",
+    "command": "composerMode.agent"
+  },
+]
