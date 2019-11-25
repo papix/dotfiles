@@ -1,0 +1,171 @@
+// Place your key bindings in this file to override the defaults
+[
+    // editorとtemrinalとの切り替え
+    {
+        "key": "ctrl+d",
+        "command": "workbench.action.terminal.toggleTerminal",
+    },
+    {
+        "key": "ctrl+d",
+        "command": "workbench.action.terminal.toggleTerminal",
+        "when": "terminalFocus",
+    },
+    // temrinalにいるとき, Ctrl + Shift + dでterminalを非表示にせずeditorに移動する
+    {
+        "key": "ctrl+shift+d",
+        "command": "workbench.action.focusActiveEditorGroup",
+        "when": "terminalFocus",
+    },
+    // Quick Open {{{ 
+    // - Ctrl + o でQuickOpen開閉
+    {
+        "key": "ctrl+o",
+        "command": "workbench.action.quickOpen",
+        "when": "!inQuickOpen",
+    },
+    {
+        "key": "ctrl+o",
+        "command": "workbench.action.closeQuickOpen",
+        "when": "inQuickOpen",
+    },
+    // - Ctrl + j/kで上下移動
+    {
+        "key": "ctrl+j",
+        "command": "workbench.action.quickOpenSelectNext",
+        "when": "inQuickOpen",
+    },
+    {
+        "key": "ctrl+k",
+        "command": "workbench.action.quickOpenSelectPrevious",
+        "when": "inQuickOpen",
+    },
+    // - Ctrl + Shift + O でProject ManagerのQuickOpen開閉
+    {
+        "key": "ctrl+shift+o",
+        "command": "projectManager.listProjects",
+    },
+    {
+        "key": "ctrl+shift+o",
+        "command": "workbench.action.closeQuickOpen",
+        "when": "inQuickOpen && inProjectManagerList",
+    },
+    // }}}
+    // ファイル内検索 {{{
+    // - Insert modeでないとき, Ctrl + f でファイル内検索を開始
+    {
+        "key": "ctrl+f",
+        "command": "actions.find",
+        "when": "editorFocus && vim.active && vim.mode != 'Insert'",
+    },
+    // - ファイル内検索中, Ctrl + fで終了する
+    {
+        "key": "ctrl+f",
+        "command": "closeFindWidget",
+        "when": "editorFocus && findWidgetVisible",
+    },
+    // - ファイル内検索中, j/kで候補移動
+    {
+        "key": "ctrl+j",
+        "command": "editor.action.nextMatchFindAction",
+        "when": "editorFocus && findWidgetVisible",
+    },
+    {
+        "key": "ctrl+k",
+        "command": "editor.action.previousMatchFindAction",
+        "when": "editorFocus && findWidgetVisible",
+    },
+    // }}}
+    // 補完 {{{
+    // - ctrl + j で移動
+    {
+        "key": "ctrl+j",
+        "command": "selectNextSuggestion",
+        "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+    },
+    // - ctrl + j で上移動
+    {
+        "key": "ctrl+k",
+        "command": "selectPrevSuggestion",
+        "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+    },
+    // }}}
+    // 操作体験をtmux風にする {{{
+    // - prefix + s/v でeditorを縦/横分割
+    {
+        "key": "ctrl+q s",
+        "command": "workbench.action.newGroupBelow",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    {
+        "key": "ctrl+q v",
+        "command": "workbench.action.newGroupRight",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    // - prefix + h/j/k/l でeditorを左/下/上/右に移動
+    {
+        "key": "ctrl+q h",
+        "command": "workbench.action.focusLeftGroup",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    {
+        "key": "ctrl+q j",
+        "command": "workbench.action.focusBelowGroup",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    {
+        "key": "ctrl+q k",
+        "command": "workbench.action.focusAboveGroup",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    {
+        "key": "ctrl+q l",
+        "command": "workbench.action.focusRightGroup",
+        "when": "editorFocus || activeEditorGroupEmpty",
+    },
+    // // - prefix + L で開いているファイルを次のeditorに移動
+    // {
+    //     "key": "ctrl+q ",
+    //     "command": "workbench.action.moveEditorToNextGroup",
+    //     "when": "editorFocus || activeEditorGroupEmpty",
+    // },
+    // // - prefix + H で開いているファイルを前のeditorに移動
+    // {
+    //     "key": "ctrl+q H",
+    //     "command": "workbench.action.moveEditorToPreviousGroup",
+    //     "when": "editorFocus || activeEditorGroupEmpty",
+    // },
+    // - prefix + b/n でeditor内の前/次のファイルにフォーカス
+    {
+        "key": "ctrl+q b",
+        "command": "workbench.action.previousEditorInGroup",
+        "when": "editorFocus",
+    },
+    {
+        "key": "ctrl+q n",
+        "command": "workbench.action.nextEditorInGroup",
+        "when": "editorFocus",
+    },
+    // - prefix + d で今フォーカスしているeditorをclose
+    {
+        "key": "ctrl+q d",
+        "command": "workbench.action.closeActiveEditor",
+    },
+    // - prefix + d で何もeditorを開いていない場合にeditorグループを閉じる
+    {
+        "key": "ctrl+q d",
+        "command": "workbench.action.closeGroup",
+        "when": "activeEditorGroupEmpty && multipleEditorGroups",
+    },
+    // - prefix + q でsidebarを開閉
+    {
+        "key": "ctrl+q q",
+        "command": "workbench.action.toggleSidebarVisibility",
+    },
+    // - 定義へジャンプ
+    {
+        "key": "ctrl+j",
+        "command": "editor.action.revealDefinition",
+        "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor",
+    },
+    // }}}
+]

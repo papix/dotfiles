@@ -1,0 +1,130 @@
+{
+    "editor.detectIndentation": false,
+    "editor.find.seedSearchStringFromSelection": false,
+    "editor.fontFamily": "'HackGen Console'",
+    "editor.fontSize": 14,
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.minimap.enabled": false,
+    "editor.renderControlCharacters": true,
+    "editor.renderWhitespace": "boundary",
+    "editor.wordWrap": "on",
+    "editor.wrappingIndent": "none",
+    "terminal.integrated.fontFamily": "'HackGen Console for Powerline'",
+    "terminal.integrated.fontSize": 14,
+    "vim.useSystemClipboard": true,
+    "vim.whichwrap": "h,l,<,>,[,]",
+    "workbench.colorTheme": "Solarized Dark",
+    "workbench.editor.enablePreview": false,
+    "vim.insertModeKeyBindings": [
+        {
+            "before": [
+                "j",
+                "j"
+            ],
+            "after": [
+                "<Esc>"
+            ]
+        }
+    ],
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "J"
+            ],
+            "after": [
+                "1",
+                "0",
+                "j"
+            ]
+        },
+        {
+            "before": [
+                "K"
+            ],
+            "after": [
+                "1",
+                "0",
+                "k"
+            ]
+        }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                ">"
+            ],
+            "after": [
+                ">",
+                "g",
+                "v"
+            ]
+        },
+        {
+            "before": [
+                "<"
+            ],
+            "after": [
+                "<",
+                "g",
+                "v"
+            ]
+        },
+        {
+            "before": [
+                "s",
+                "s"
+            ],
+            "commands": [
+                "editor.action.sortLinesAscending",
+            ],
+        },
+        {
+            "before": [
+                "#"
+            ],
+            "after": [
+                "g",
+                "c"
+            ]
+        },
+        {
+            "before": [
+                "J"
+            ],
+            "after": [
+                "1",
+                "0",
+                "j"
+            ]
+        },
+        {
+            "before": [
+                "K"
+            ],
+            "after": [
+                "1",
+                "0",
+                "k"
+            ]
+        },
+        {
+            "before": [
+                "a",
+                "a"
+            ],
+            "commands": [
+                "alignment.alignFirst",
+            ]
+        }
+    ],
+    "projectManager.git.baseFolders": [
+        "/Users/papix/.ghq/src/github.com/papix",
+        "/Users/papix/.ghq/src/github.com/hatena",
+        "/Users/papix/.ghq/src/ghe.admin.h/hatena",
+    ],
+    "go.useLanguageServer": true,
+    "html.format.enable": false,
+    "typescript.format.enable": false,
+    "javascript.format.enable": false,
+}
