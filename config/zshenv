@@ -1,0 +1,68 @@
+########################################
+# PATH
+########################################
+
+export GHQPATH="${HOME}/.ghq"
+export GOPATH="${HOME}/.go"
+export GOBIN="${GOPATH}/bin"
+
+# see also: http://pastak.hatenablog.com/entry/2014/02/21/025836
+typeset -gx -U path
+path=(
+  ${HOME}/.anyenv/bin(N-/)
+  ${GOBIN}(N-/)
+  /usr/local/bin(N-/)
+  /usr/local/sbin(N-/)
+  /usr/bin(N-/)
+  /usr/sbin(N-/)
+  /bin(N-/)
+  /sbin(N-/)
+)
+
+typeset -gx -U fpath
+fpath=(
+  $(brew --prefix)/share/zsh/site-functions(N-/)
+  $(brew --prefix)/share/zsh-completions(N-/)
+  ${fpath}
+)
+
+########################################
+# Tools
+########################################
+
+# config
+export XDG_CONFIG_HOME="${HOME}/.config"
+
+# LANG
+export LANGUAGE=ja_JP.UTF-8
+export LANG="${LANGUAGE}"
+export LC_COLLATE="${LANGUAGE}"
+export LC_CTYPE="${LANGUAGE}"
+export LC_MESSAGES="${LANGUAGE}"
+export LC_MONETARY="${LANGUAGE}"
+export LC_NUMERIC="${LANGUAGE}"
+export LC_TIME="${LANGUAGE}"
+export LC_ALL="${LANGUAGE}"
+
+# ls
+export LSCOLORS=exfxcxdxbxegedabagacad
+export LS_COLORS='di=34:ln=35:so=32:pi=33:ex=31:bd=46;34:cd=43;34:su=41;30:sg=46;30:tw=42;30:ow=43;30'
+
+# tmux
+export TMUX_POWERLINE_DIR_USER_THEMES="${HOME}/.tmux-powerline-themes"
+export TMUX_POWERLINE_THEME='default'
+
+# zsh
+export HISTFILE="${HOME}/.zsh_history"
+export HISTSIZE=10000000
+export SAVEHIST=${HISTSIZE}
+
+# editor
+export EDITOR='code'
+export GIT_EDITOR='nvim'
+
+# pager
+export LESS='-FRX'
+
+# Perl
+export PERL_RL='EditLine'

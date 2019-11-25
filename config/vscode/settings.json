@@ -1,0 +1,74 @@
+{
+    "editor.detectIndentation": false,
+    "editor.find.seedSearchStringFromSelection": false,
+    "editor.fontFamily": "'Ricty for Powerline', Menlo, Monaco, 'Courier New', monospace",
+    "editor.fontSize": 14,
+    "editor.insertSpaces": true,
+    "editor.minimap.enabled": false,
+    "editor.renderControlCharacters": true,
+    "editor.renderWhitespace": "boundary",
+    "editor.wordWrap": "on",
+    "editor.wrappingIndent": "none",
+    "prettier.tabWidth": 4,
+    "terminal.integrated.fontFamily": "'Ricty for Powerline', Menlo, Monaco, 'Courier New', monospace",
+    "terminal.integrated.fontSize": 14,
+    "vim.useSystemClipboard": true,
+    "vim.whichwrap": "h,l,<,>,[,]",
+    "workbench.colorTheme": "Solarized Dark",
+    "workbench.editor.enablePreview": false,
+
+    "vim.insertModeKeyBindings": [
+        {
+            "before": ["j","j"],
+            "after": ["<Esc>"]
+        }
+    ],
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": ["J"],
+            "after": ["1","0","j"]
+        },
+        {
+            "before": ["K"],
+            "after": ["1","0","k"]
+        }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        {
+            "before": [">"],
+            "after": [">","g","v"]
+        },
+        {
+            "before": ["<"],
+            "after": ["<","g","v"]
+        },
+        {
+            "before": ["#"],
+            "after": ["g", "c"]
+        },
+        {
+            "before": ["a", "a"],
+            "after": [],
+            "commands": [
+                {
+                    "command": "alignment.alignFirst",
+                    "args": []
+                }
+            ]
+        }
+    ],
+    "githubIssues.queries": [
+        {
+            "label": "My Issues",
+            "query": "default"
+        },
+        {
+            "label": "Created Issues",
+            "query": "author:${user} state:open repo:${owner}/${repository} sort:updated-desc"
+        }
+    ],
+    "projectManager.git.baseFolders": [
+        "/Users/papix/.ghq/github.com/papix",
+        "/Users/papix/.ghq/github.com/hatena",
+    ],
+}

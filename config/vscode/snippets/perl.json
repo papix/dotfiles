@@ -1,0 +1,29 @@
+{
+	"Dumper": {
+		"prefix": "dw",
+		"body": [
+			"use DDP { deparse => 1, use_prototypes => 0 };",
+			"DDP::p $1;",
+		],
+		"description": "Dumper using Data::Printer",
+	},
+	"Slurp": {
+		"prefix": "slurp",
+		"body": [
+			"open my $$fh, '<', $1 or die \"failed to open file: $!\";",
+			"my $$content = do { local $/; <$$fh> };",
+		],
+		"description": "Slurp from file",
+	},
+	"Script": {
+		"prefix": "u",
+		"body": [
+			"use strict;",
+			"use warnings;",
+			"use utf8;",
+			"",
+			"$1",
+		],
+		"description": "Template for script",
+	}
+}
