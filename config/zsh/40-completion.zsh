@@ -1,0 +1,35 @@
+#!/usr/bin/env zsh
+########################################
+# 補完設定
+########################################
+
+autoload -Uz compinit && compinit
+
+# 補完オプション
+setopt auto_list
+setopt auto_menu
+setopt auto_param_slash
+setopt auto_pushd
+setopt correct
+setopt list_packed
+setopt list_types
+setopt magic_equal_subst
+setopt pushd_ignore_dups
+
+# 補完スタイル
+zstyle ':completion:*:default' menu select
+zstyle ':completion:*' list-separator '=>'
+zstyle ':completion:*:manuals' separate-sections true
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*:cd:*' ignore-parents parent pwd
+zstyle ':completion:*' list-colors 'di=34' 'ln=35' 'so=32' 'ex=31' 'bd=46;34' 'cd=43;34'
+
+# 詳細な補完
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*' completer _expand _complete _match _prefix _list _approximate
+zstyle ':completion:*:messages' format '%F{yellow}%d'${DEFAULT}
+zstyle ':completion:*:warnings' format '%F{red}No matches for:''%F{yellow} %d'${DEFAULT}
+zstyle ':completion:*:corrections' format '%F{yellow}%d ''%F{red}(errors: %e)%b'${DEFAULT}
+zstyle ':completion:*:descriptions' format '%F{yellow}completing %B%d%b'${DEFAULT}
+zstyle ':completion:*:options' description 'yes'
+zstyle ':completion:*' group-name ''

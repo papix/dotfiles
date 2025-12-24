@@ -1,0 +1,259 @@
+" Vim/Neovim共通設定ファイル
+" =============================================================================
+" このファイルはNeovimを主な対象としていますが、Vimでも動作するよう互換性を保っています
+
+" エンコーディング設定
+" -----------------------------------------------------------------------------
+set encoding=utf-8
+set fileencoding=utf-8
+set fileencodings=utf-8,cp932,euc-jp,sjis
+set fileformats=unix,dos,mac
+
+" 基本設定
+" -----------------------------------------------------------------------------
+set number                      " 行番号を表示
+" set relativenumber              " 相対行番号を表示（コメントアウト）
+set cursorline                  " カーソル行をハイライト
+set showmatch                   " 対応する括弧をハイライト
+set matchtime=1                 " 括弧のハイライト時間を0.1秒に
+set laststatus=2                " ステータスラインを常に表示
+set showcmd                     " 入力中のコマンドを表示
+set ruler                       " カーソル位置を表示
+set wildmenu                    " コマンドライン補完を拡張
+set wildmode=list:longest,full  " 補完の動作設定
+set history=1000                " コマンド履歴を増やす
+set hidden                      " バッファを保存せずに切り替え可能に
+set autoread                    " ファイルが外部で変更されたら自動読み込み
+set backspace=indent,eol,start  " バックスペースの動作を改善
+set whichwrap=b,s,h,l,<,>,[,]   " カーソルを行頭、行末で止まらないように
+set scrolloff=5                 " スクロール時に上下に余裕を持たせる
+set sidescrolloff=5             " 横スクロール時に左右に余裕を持たせる
+set display=lastline            " 長い行も最後まで表示
+set pumheight=10                " 補完メニューの高さ
+set helpheight=999              " ヘルプウィンドウを最大化
+set list                        " 不可視文字を表示
+set listchars=tab:▸\ ,trail:·,extends:❯,precedes:❮  " 不可視文字の表示設定
+
+" インデント設定
+" -----------------------------------------------------------------------------
+set expandtab                   " タブを空白に変換
+set tabstop=4                   " タブ幅を4に設定
+set shiftwidth=4                " 自動インデント幅を4に設定
+set softtabstop=4               " タブキーで挿入される空白数
+set autoindent                  " 自動インデント
+set smartindent                 " スマートインデント
+set smarttab                    " 行頭のタブをshiftwidthに合わせる
+
+" 検索設定
+" -----------------------------------------------------------------------------
+set hlsearch                    " 検索結果をハイライト
+set incsearch                   " インクリメンタルサーチ
+set ignorecase                  " 大文字小文字を区別しない
+set smartcase                   " 大文字が含まれる場合は区別する
+set wrapscan                    " 検索をファイル末尾でループする
+
+" ファイル設定
+" -----------------------------------------------------------------------------
+set backup                      " バックアップファイルを作成
+set backupdir=~/.vim/backup     " バックアップディレクトリ
+set swapfile                    " スワップファイルを作成
+set directory=~/.vim/swap       " スワップファイルディレクトリ
+set undofile                    " アンドゥファイルを作成
+set undodir=~/.vim/undo         " アンドゥファイルディレクトリ
+set viminfo+=n~/.vim/viminfo    " viminfoファイルの場所
+
+" Neovim固有の設定を無効化（Vimでエラーにならないように）
+" -----------------------------------------------------------------------------
+if !has('nvim')
+    set ttymouse=xterm2         " マウスサポート（Vimのみ）
+    set ttyfast                 " 高速ターミナル接続（Vimのみ）
+endif
+
+" マウス設定
+" -----------------------------------------------------------------------------
+if has('mouse')
+    set mouse=a                 " すべてのモードでマウスを有効化
+endif
+
+" クリップボード設定
+" -----------------------------------------------------------------------------
+" システムクリップボードとの連携設定（macOS/Linux対応）
+" Neovimでは基本的に自動で適切なクリップボードが選択される
+if has('clipboard')
+    " unnamedplus: Linuxの選択用クリップボード（Ctrl+C/V）
+    " unnamed: macOSのクリップボード
+    if has('unnamedplus')
+        set clipboard=unnamed,unnamedplus
+    else
+        set clipboard=unnamed
+    endif
+    
+    " Neovim固有のクリップボード設定
+    if has('nvim')
+        " Neovimのクリップボード統合を有効化
+        " macOSではpbcopy/pbpaste、LinuxではXorg/Waylandクリップボードを自動検出
+    endif
+else
+    " クリップボード機能が無い場合の代替設定（主に古いVim用）
+    " macOSの場合
+    if has('mac') || has('macunix')
+        " ヤンク時にpbcopyを使用
+        vnoremap <silent> y :w !pbcopy<CR><CR>
+        nnoremap <silent> yy :.w !pbcopy<CR><CR>
+        " ペースト時にpbpasteを使用
+        nnoremap <silent> p :r !pbpaste<CR>
+        vnoremap <silent> p :r !pbpaste<CR>
+    " Linuxの場合
+    elseif has('unix') && !has('macunix')
+        " xclipが利用可能かチェック
+        if executable('xclip')
+            " ヤンク時にxclipを使用
+            vnoremap <silent> y :w !xclip -selection clipboard<CR><CR>
+            nnoremap <silent> yy :.w !xclip -selection clipboard<CR><CR>
+            " ペースト時にxclipを使用
+            nnoremap <silent> p :r !xclip -selection clipboard -o<CR>
+            vnoremap <silent> p :r !xclip -selection clipboard -o<CR>
+        elseif executable('xsel')
+            " xselが利用可能な場合
+            vnoremap <silent> y :w !xsel -ib<CR><CR>
+            nnoremap <silent> yy :.w !xsel -ib<CR><CR>
+            nnoremap <silent> p :r !xsel -ob<CR>
+            vnoremap <silent> p :r !xsel -ob<CR>
+        endif
+    endif
+endif
+
+" tmux環境での追加設定
+if $TMUX != ''
+    " tmux環境では特別な設定が必要な場合があります
+    " OSCエスケープシーケンスを使用してtmuxのクリップボードに対応
+    " これは主にSSH経由でのリモート接続時に有用です
+endif
+
+" 見た目の設定
+" -----------------------------------------------------------------------------
+" True Colorの設定を無効化（256色モードを使用）
+" if has('termguicolors')
+"     set termguicolors
+" endif
+set t_Co=256                    " 256色モードを強制
+set background=dark             " 背景色を暗く設定
+syntax enable                   " シンタックスハイライトを有効化
+
+" Solarized用の設定
+let g:solarized_termcolors=256  " 256色モードでSolarizedを使用
+let g:solarized_termtrans=1     " 透過背景をサポート
+let g:solarized_bold=0          " 太字を無効化（より落ち着いた表示）
+let g:solarized_underline=0     " 下線を無効化
+let g:solarized_italic=0        " 斜体を無効化
+
+" カラースキーム設定
+" 利用可能なカラースキーム: solarized, gruvbox, onedark, nord
+let g:my_colorscheme = 'solarized'  " デフォルトのカラースキーム
+
+try
+    execute 'colorscheme ' . g:my_colorscheme
+catch
+    " 指定されたカラースキームが見つからない場合
+    try
+        colorscheme slate       " 落ち着いた組み込みカラースキーム
+    catch
+        colorscheme desert      " フォールバック
+    endtry
+endtry
+
+" ファイルタイプ設定
+" -----------------------------------------------------------------------------
+filetype plugin indent on       " ファイルタイプ検出、プラグイン、インデントを有効化
+
+" キーマッピング
+" -----------------------------------------------------------------------------
+" リーダーキーをスペースに設定
+let mapleader = "\<Space>"
+
+" jjでESC
+inoremap jj <ESC>
+
+" 検索ハイライトを消す
+nnoremap <silent> <ESC><ESC> :nohlsearch<CR>
+
+" ウィンドウ間の移動を簡単に
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" ビジュアルモードで選択した部分を検索
+vnoremap * "zy:let @/ = @z<CR>n
+
+" Yを行末までヤンクに変更（Dと同じ動作）
+nnoremap Y y$
+
+" 10行単位の高速移動（Shift+J/K）
+nnoremap J 10j
+nnoremap K 10k
+" ビジュアルモードでも対応
+vnoremap J 10j
+vnoremap K 10k
+
+" 相対行番号のトグル（\rで切り替え）
+nnoremap <Leader>r :set relativenumber!<CR>
+
+" 自動コマンド
+" -----------------------------------------------------------------------------
+augroup MyAutoCmd
+    autocmd!
+    " ファイルを開いた時に前回の位置に移動
+    autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+    " 保存時に行末の空白を削除
+    autocmd BufWritePre * :%s/\s\+$//e
+    " 必要なディレクトリを自動作成
+    autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
+augroup END
+
+" 関数定義
+" -----------------------------------------------------------------------------
+" ディレクトリを自動作成
+function! s:auto_mkdir(dir, force)
+    if !isdirectory(a:dir) && (a:force ||
+                \ input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
+        call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
+    endif
+endfunction
+
+" Neovim用の追加設定
+" -----------------------------------------------------------------------------
+if has('nvim')
+    " Neovim固有の設定をここに記述
+    set inccommand=nosplit      " 置換をインタラクティブに表示
+    
+    " より良いデフォルト設定
+    set pumblend=10             " ポップアップメニューの透明度
+    set winblend=10             " ウィンドウの透明度
+    
+    " ターミナルモードの設定
+    tnoremap <Esc> <C-\><C-n>   " ESCでターミナルモードを抜ける
+    
+    " 診断表示の改善
+    set updatetime=300          " より速い診断メッセージの更新
+    
+    " Neovimのプロバイダ設定（パフォーマンス向上）
+    " 使用しないプロバイダは無効化
+    let g:loaded_python_provider = 0
+    let g:loaded_ruby_provider = 0
+    let g:loaded_perl_provider = 0
+    let g:loaded_node_provider = 0
+    
+    " Python3プロバイダのみ有効化（必要に応じて）
+    " let g:python3_host_prog = '/usr/bin/python3'
+endif
+
+" プラグイン設定（将来的に追加）
+" -----------------------------------------------------------------------------
+" vim-plugなどのプラグインマネージャーの設定は後で追加可能
+
+" ローカル設定の読み込み
+" -----------------------------------------------------------------------------
+if filereadable(expand('~/.vimrc.local'))
+    source ~/.vimrc.local
+endif

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# gitleaks の pre-commit フック
+# ステージングされた変更に対して秘密情報のスキャンを実行
+
+# SKIP 環境変数で gitleaks をスキップ可能
+if [[ "${SKIP:-}" == *"gitleaks"* ]]; then
+    echo "[gitleaks] Skipped by SKIP environment variable"
+    exit 0
+fi
+
+# gitleaks が利用可能か確認
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "[ERROR] gitleaks not found."
+    echo "Install with: brew install gitleaks"
+    echo ""
+    echo "To skip this check: SKIP=gitleaks git commit -m 'message'"
+    exit 1
+fi
+
+# gitleaks でステージングされた変更をスキャン
+echo "[gitleaks] Scanning for secrets..."
+if ! gitleaks protect --staged --verbose --redact; then
+    echo ""
+    echo "[ERROR] gitleaks detected potential secrets in your commit."
+    echo "Please review and remove any sensitive information."
+    echo ""
+    echo "To bypass this check (use with caution):"
+    echo "  SKIP=gitleaks git commit -m 'message'"
+    echo "  or: git commit --no-verify"
+    exit 1
+fi
+
+echo "[gitleaks] No secrets detected."
+exit 0

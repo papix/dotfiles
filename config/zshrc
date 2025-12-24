@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+########################################
+# Modular Zsh Configuration
+########################################
+
+# Determine config directory
+if [[ -d "${HOME}/.config/zsh" ]]; then
+    # If ~/.config/zsh exists (after setup.sh), use it
+    ZSH_CONFIG_DIR="${HOME}/.config/zsh"
+elif [[ -d "$(dirname ${(%):-%x})/zsh" ]]; then
+    # During development, use relative path
+    ZSH_CONFIG_DIR="$(dirname ${(%):-%x})/zsh"
+else
+    echo "Warning: zsh config directory not found"
+    ZSH_CONFIG_DIR=""
+fi
+
+# Load all zsh modules in order with error handling
+if [[ -n "$ZSH_CONFIG_DIR" ]]; then
+    for config_file in ${ZSH_CONFIG_DIR}/*.zsh(N); do
+        # Debug mode: show which module is being loaded
+        [[ -n "$ZSH_DEBUG" ]] && echo "Loading: $(basename $config_file)"
+
+        # Try to source the file and capture any errors
+        if ! source $config_file 2>/dev/null; then
+            echo "Warning: Failed to load $(basename $config_file)" >&2
+        else
+            [[ -n "$ZSH_DEBUG" ]] && echo "  Loaded successfully"
+        fi
+    done
+fi
+

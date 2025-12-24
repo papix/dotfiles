@@ -1,0 +1,40 @@
+#!/bin/bash
+# クリップボードコピースクリプト（OSC52フォールバック付き）
+# 優先順位: pbcopy > xclip > wl-copy > OSC52
+
+# 標準入力を読み込む
+input=$(cat)
+
+# macOS
+if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$input" | pbcopy
+    exit 0
+fi
+
+# Linux X11 (xclip)
+if command -v xclip >/dev/null 2>&1 && [ -n "$DISPLAY" ]; then
+    printf '%s' "$input" | xclip -selection clipboard
+    exit 0
+fi
+
+# Linux Wayland (wl-copy)
+if command -v wl-copy >/dev/null 2>&1 && [ -n "$WAYLAND_DISPLAY" ]; then
+    printf '%s' "$input" | wl-copy
+    exit 0
+fi
+
+# OSC52フォールバック（ターミナルエミュレータ経由）
+# SSH接続やXなし環境でも動作
+osc52_copy() {
+    local encoded
+    encoded=$(printf '%s' "$input" | base64 | tr -d '\n')
+
+    # tmux環境ではpassthroughシーケンスでラップ
+    if [ -n "$TMUX" ]; then
+        printf '\033Ptmux;\033\033]52;c;%s\033\033\\\033\\' "$encoded"
+    else
+        printf '\033]52;c;%s\033\\' "$encoded"
+    fi
+}
+
+osc52_copy

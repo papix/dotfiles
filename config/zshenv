@@ -1,0 +1,95 @@
+########################################
+# PATH
+########################################
+export GOPATH="${HOME}/.ghq"
+export GOBIN="${GOPATH}/bin"
+
+########################################
+# Tools
+########################################
+
+# config
+export XDG_CONFIG_HOME="${HOME}/.config"
+export XDG_DATA_HOME="${HOME}/.local/share"
+
+# LANG
+export LANGUAGE=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# ls (Solarized Dark)
+# di=directory(blue), ln=symlink(cyan), ex=executable(green)
+export LSCOLORS=GxfxcxdxCxegedabagacad
+export LS_COLORS='di=1;36:ln=1;35:so=1;32:pi=33:ex=1;32:bd=1;34;46:cd=1;34;43:su=0;41:sg=0;46:tw=0;42:ow=1;34;43'
+
+# zsh
+export HISTFILE="${HOME}/.zsh_history"
+export HISTSIZE=10000000
+export SAVEHIST=${HISTSIZE}
+
+# 元のターミナル環境を保存（tmux起動前）
+if [[ -z "$ORIGINAL_TERM_PROGRAM" && -n "$TERM_PROGRAM" ]]; then
+    export ORIGINAL_TERM_PROGRAM="$TERM_PROGRAM"
+fi
+
+# editor（常にnvimを使用）
+export EDITOR='nvim'
+export GIT_EDITOR='nvim'
+
+# pager
+export LESS='-FRX'
+
+# Perl
+export PERL_RL='EditLine'
+
+# Load local config (not tracked in git)
+# Use this file for machine-specific settings like API keys
+if [[ -f "${HOME}/.zshenv.local" ]]; then
+    source "${HOME}/.zshenv.local"
+fi
+
+# Claude Code
+export DISABLE_TELEMETRY=true
+export DISABLE_ERROR_REPORTING=true
+export DISABLE_BUG_COMMAND=true
+
+########################################
+# Environment
+########################################
+
+# ターミナル環境の判定と適切なTERM設定
+# 基本的にTERMはターミナルエミュレータが設定するので、
+# 特殊な場合を除いて上書きしない
+if [[ -n "$TMUX" ]]; then
+    # tmux内では設定しない（tmux.confの設定を使用）
+    :
+elif [[ "$TERM_PROGRAM" = "vscode" ]] || [[ -n "$VSCODE_INJECTION" ]]; then
+    # VSCode/Cursorの場合のみ明示的に設定
+    export TERM="xterm-256color"
+fi
+# iTerm2は適切なTERMを設定するので、上書きしない
+
+if ( test "$CODESPACES" = "true" ); then
+    # Codespacesの場合
+    export SHELL="/usr/bin/zsh"
+
+    export VSCODE_IPC_HOOK_CLI="/tmp/$(ls /tmp -t | grep 'vscode-ipc' | head -n 1)"
+else
+    # Codespaces ではない場合
+    typeset -gx -U path
+    path=(
+        ${HOME}/.ghq/github.com/papix/dotfiles/bin
+        ${GOBIN}
+        ${HOME}/.cargo/bin
+        ${path}
+    )
+fi
+
+if [ -f "/proc/version" ] && ( grep -q -i "microsoft" /proc/version ); then
+    # WSL2 の場合
+    # XXX: 何故か WSL_DISTRO_NAME が反映されていないことがある。WSL2で動いている場合は「Ubuntu」をセットしておく
+    export WSL_DISTRO_NAME=Ubuntu
+    # XXX: 何故か ~/.vscode-server/bin へのパスが通っていて、Windows側の code が使えないときがあるので、 ~/.vscode-server/bin のパスを消す
+    # pathを配列として扱い、重複を防ぐ
+    path=(${path:#*/.vscode-server/bin/*})
+    typeset -gx -U path
+fi

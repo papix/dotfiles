@@ -1,0 +1,38 @@
+#!/usr/bin/env zsh
+# tmuxウィンドウ名をディレクトリベースで更新
+
+function tmux-git-window-name() {
+    [[ -z "$TMUX" ]] && return
+
+    local window_title="${PWD##*/}"  # デフォルト: 末尾ディレクトリ名
+
+    # gitリポジトリ内の場合
+    if git rev-parse --git-dir &>/dev/null; then
+        local repo_path=$(git rev-parse --show-toplevel 2>/dev/null)
+
+        if [[ -n "$repo_path" ]]; then
+            # ghq/github.com配下の場合はオーナー別アイコン
+            if [[ "$repo_path" =~ ^$HOME/.ghq/github.com/([^/]+)/([^/]+) ]]; then
+                local owner="${match[1]}"
+                local repo="${match[2]}"
+
+                case "$owner" in
+                    "papix")
+                        window_title="$(printf '\ue28e') $repo"  # 蝶
+                        ;;
+                    "example-owner")
+                        window_title="$(printf '\uf205') $repo"  # トグル
+                        ;;
+                    *)
+                        window_title="$(printf '\uf408') $owner/$repo"  # GitHub
+                        ;;
+                esac
+            else
+                # ghq以外のgitリポジトリはルートディレクトリ名
+                window_title="${repo_path##*/}"
+            fi
+        fi
+    fi
+
+    tmux rename-window "$window_title"
+}

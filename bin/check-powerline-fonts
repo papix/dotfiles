@@ -1,0 +1,22 @@
+#!/bin/bash
+# Powerlineフォントの表示テストスクリプト
+
+echo "Powerline font test:"
+echo ""
+echo "Separators:"
+printf "  Right: \ue0b0 (U+E0B0)\n"
+printf "  Left:  \ue0b2 (U+E0B2)\n"
+printf "  Right thin: \ue0b1 (U+E0B1)\n"
+printf "  Left thin:  \ue0b3 (U+E0B3)\n"
+echo ""
+echo "Symbols:"
+printf "  Branch: \ue0a0 (U+E0A0)\n"
+printf "  Line number: \ue0a1 (U+E0A1)\n"
+printf "  Padlock: \ue0a2 (U+E0A2)\n"
+echo ""
+echo "If you see boxes or question marks, the font is not properly configured."
+echo ""
+echo "Current font check:"
+echo "Terminal: $TERM"
+echo "LANG: $LANG"
+echo "LC_ALL: $LC_ALL"
