@@ -4,6 +4,10 @@
 function tmux-git-window-name() {
     [[ -z "$TMUX" ]] && return
 
+    # プラグインディレクトリ等は除外（早期リターン）
+    [[ "$PWD" == "$HOME/.claude/plugins"* ]] && return
+    [[ "$PWD" == "$HOME/.claude/mcp-servers"* ]] && return
+
     local window_title="${PWD##*/}"  # デフォルト: 末尾ディレクトリ名
 
     # gitリポジトリ内の場合

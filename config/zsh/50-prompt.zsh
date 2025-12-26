@@ -10,8 +10,15 @@ autoload -Uz add-zsh-hook
 autoload -Uz vcs_info
 autoload -Uz is-at-least
 
+# プラットフォーム別ユーザー名カラー
+if [[ "$(uname)" == "Darwin" ]]; then
+  USER_NAME_COLOR="${SOLARIZED_CYAN}"
+else
+  USER_NAME_COLOR="${SOLARIZED_BLUE}"
+fi
+
 # プロンプト定義
-PROMPT="${SOLARIZED_BLUE}[%1v]${RESET} ${SOLARIZED_GREEN}%~${RESET}
+PROMPT="${USER_NAME_COLOR}[%1v]${RESET} ${SOLARIZED_GREEN}%~${RESET}
 $ "
 PROMPT2='> '
 SPROMPT='"%r" is correct? ([y]es, [N]o, [a]bort, [e]dit):'
