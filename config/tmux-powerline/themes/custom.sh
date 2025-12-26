@@ -105,6 +105,7 @@ if [ -z "$TMUX_POWERLINE_LEFT_STATUS_SEGMENTS" ]; then
 	TMUX_POWERLINE_LEFT_STATUS_SEGMENTS=(
 		"tmux_session_info 37 234"
 		"battery 166 235"
+		"os 238 244"
 		#"hostname 33 0"
 		#"mode_indicator 165 0"
 		#"ifstat 30 255"
