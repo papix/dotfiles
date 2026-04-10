@@ -113,6 +113,9 @@ function test_worktree_path_detection() {
 }
 
 function test_peco_branch_moves_to_worktree() {
+    setopt localoptions
+    unsetopt chase_links
+
     local tmpdir
     tmpdir=$(mktemp -d)
     local original_dir="${PWD}"
@@ -125,6 +128,9 @@ function test_peco_branch_moves_to_worktree() {
 
     local nested_dir="${main_repo}/src"
     mkdir -p "${nested_dir}"
+    local linked_repo="${tmpdir}/main-link"
+    ln -s "${main_repo}" "${linked_repo}"
+    local linked_nested_dir="${linked_repo}/src"
 
     local wt_path="${tmpdir}/wt-feature"
     git -C "${main_repo}" worktree add -b feature "${wt_path}" -q
@@ -136,7 +142,7 @@ function test_peco_branch_moves_to_worktree() {
 
     BUFFER=""
     CURSOR=0
-    cd "${nested_dir}" || exit_code=1
+    cd "${linked_nested_dir}" || exit_code=1
 
     if ! peco-branch; then
         exit_code=1
