@@ -15,6 +15,26 @@ function assert_eq() {
     fi
 }
 
+function normalize_existing_path() {
+    local path="$1"
+    (
+        builtin cd -P -- "$path" >/dev/null 2>&1 && pwd
+    )
+}
+
+function assert_same_path() {
+    local expected="$1"
+    local actual="$2"
+    local message="$3"
+
+    local normalized_expected
+    normalized_expected=$(normalize_existing_path "$expected")
+    local normalized_actual
+    normalized_actual=$(normalize_existing_path "$actual")
+
+    assert_eq "${normalized_expected}" "${normalized_actual}" "${message}"
+}
+
 function assert_contains() {
     local needle="$1"
     local haystack="$2"
@@ -85,7 +105,7 @@ function test_worktree_path_detection() {
 
     # アサーション失敗時もクリーンアップできるよう結果を後でチェック
     local exit_code=0
-    assert_eq "${wt_path}" "${result}" "__git_branch_worktree_path should return worktree path for checked-out branch" || exit_code=1
+    assert_same_path "${wt_path}" "${result}" "__git_branch_worktree_path should return worktree path for checked-out branch" || exit_code=1
     assert_eq "" "${result_none}" "__git_branch_worktree_path should return empty for branch not in worktree" || exit_code=1
 
     rm -rf "${tmpdir}"
@@ -123,7 +143,7 @@ function test_peco_branch_moves_to_worktree() {
     fi
 
     local expected_path="${wt_path}/src"
-    assert_eq "${expected_path}" "${PWD}" "peco-branch should move to the selected worktree path" || exit_code=1
+    assert_same_path "${expected_path}" "${PWD}" "peco-branch should move to the selected worktree path" || exit_code=1
 
     cd "${original_dir}" || true
     unfunction peco
