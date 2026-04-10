@@ -1,0 +1,27 @@
+# Full profile packages for Linux (Homebrew)
+peco
+tmux
+tig
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+colordiff
+tree
+tldr
+git
+neovim
+jq
+shellcheck
+shfmt
+actionlint
+gh
+gitleaks
+chezmoi
+ghq
+mise
+coreutils
+golang
+direnv
+ag
+k1LoW/tap/roots
+azure-cli

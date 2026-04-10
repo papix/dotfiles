@@ -1,0 +1,6 @@
+# Minimal profile packages for macOS (Homebrew)
+git
+zsh
+tmux
+neovim
+jq

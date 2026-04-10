@@ -65,6 +65,19 @@ export DISABLE_AUTO_TMUX=1
 export EDITOR=nvim
 ```
 
+## 開発時の品質チェック
+
+```bash
+# 既存の回帰テスト
+bash test/run.sh
+
+# シェルスクリプト静的解析
+bin/lint-shell
+```
+
+`bin/lint-shell` は `setup.sh`、`bin/`、`test/` の主要bashスクリプトと、tmux-powerlineセグメントを `shellcheck` で検証します。`shfmt` が利用可能な場合は、シェルスクリプトのフォーマットも確認します。
+
+`full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` も導入します。
 ## トラブルシューティング
 
 ### Homebrewのインストールに失敗

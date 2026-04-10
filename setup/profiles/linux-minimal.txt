@@ -1,0 +1,6 @@
+# Minimal profile packages for Linux (Homebrew)
+git
+zsh
+tmux
+neovim
+jq

@@ -10,7 +10,7 @@ A comprehensive dotfiles repository providing a modular Zsh configuration, tmux 
 - Terminal Multiplexer: tmux + tmux-powerline
 - Editor: Neovim
 - Package Manager: Homebrew
-- Tools: peco, ghq, direnv, anyenv, gitleaks, shellcheck, tig, tree, colordiff, tldr, ag, roots
+- Tools: peco, ghq, direnv, mise, actionlint, gitleaks, shellcheck, shfmt, tig, tree, colordiff, tldr, ag, roots, azure-cli
 
 ## Development Standards
 
