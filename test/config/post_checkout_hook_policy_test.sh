@@ -67,7 +67,7 @@ escaped_source="$tmp_dir/escaped.txt"
 escaped_dest="$worktree_parent/escaped.txt"
 
 mkdir -p "$main_repo" "$worktree_parent"
-git -C "$main_repo" init -q
+GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git -C "$main_repo" init -q
 printf 'tracked\n' >"$main_repo/tracked.txt"
 git -C "$main_repo" add tracked.txt
 git -C "$main_repo" -c user.name=test -c user.email=test@example.com commit -qm init

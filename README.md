@@ -28,6 +28,7 @@ $ bash setup.sh
 
 - `pre-commit`: `lint-shell` と `gitleaks` を実行します。
 - `pre-push`: push 対象コミットに対して `gitleaks` を実行します。
+- GitHub Actions の `CI` でも `secret-scan` ジョブが `gitleaks` を実行します。
 - 既存リポジトリに適用する場合は、各リポジトリで `git init` を実行してください。
 
 ## 便利コマンド
