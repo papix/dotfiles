@@ -27,7 +27,7 @@ assert_contains 'git ls-files' "$LINT_SCRIPT"
 assert_contains 'Linting test scripts' "$LINT_SCRIPT"
 assert_contains 'shfmt -d' "$LINT_SCRIPT"
 assert_contains 'SC1091,SC2034' "$LINT_SCRIPT"
-assert_contains 'SC1090,SC2016,SC2329' "$LINT_SCRIPT"
+assert_contains 'SC1090,SC2016,SC2317,SC2329' "$LINT_SCRIPT"
 
 # 期待: スクリプトが正常終了する
 "$LINT_SCRIPT"

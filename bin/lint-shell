@@ -66,7 +66,9 @@ fi
 
 echo "[shellcheck] Linting test scripts..."
 if ((${#test_targets[@]} > 0)); then
-    shellcheck -e SC1090,SC2016,SC2329 "${test_targets[@]}"
+    # ShellCheck のバージョン差異で「間接呼び出しの関数」が
+    # SC2317 または SC2329 として報告されるため両方を除外する
+    shellcheck -e SC1090,SC2016,SC2317,SC2329 "${test_targets[@]}"
 fi
 
 echo "[shellcheck] Linting tmux-powerline scripts..."
