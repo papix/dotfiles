@@ -13,6 +13,7 @@
 - [setup-dev-env.md](./how-to/setup-dev-env.md) - 開発環境のセットアップ
 - [customize-zsh.md](./how-to/customize-zsh.md) - Zsh設定のカスタマイズ
 - [manage-tmux-sessions.md](./how-to/manage-tmux-sessions.md) - tmuxセッション管理
+- [manage-neovim-config.md](./how-to/manage-neovim-config.md) - Neovim設定の運用と切り戻し
 
 ### [reference/](./reference/)
 技術仕様とAPI参照。

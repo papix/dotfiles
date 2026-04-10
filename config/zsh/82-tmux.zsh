@@ -16,11 +16,8 @@ if [[ -n "$TMUX" ]]; then
         autoload -Uz add-zsh-hook
         add-zsh-hook chpwd tmux-git-window-name
         
-        # プロンプト表示前にもwindow名を更新（プロセス変更を検出）
+        # プロンプト表示前にもwindow名を更新
         add-zsh-hook precmd tmux-git-window-name
-
-        # コマンド実行直前にもwindow名を更新（プロセス名による上書きを抑止）
-        add-zsh-hook preexec tmux-git-window-name
         
         # 初回読み込み時に実行
         tmux-git-window-name
@@ -104,7 +101,7 @@ if [[ -z "$DISABLE_AUTO_TMUX" ]] && \
     # 旧セッション互換: 生の名前が存在すれば優先して使用
     if [[ -n "$raw_tmux_session_name" ]]; then
         if [[ "$raw_tmux_session_name" != *.* && "$raw_tmux_session_name" != *:* ]]; then
-            if ( tmux has-session -t "$raw_tmux_session_name" 2>/dev/null ); then
+            if command tmux has-session -t "$raw_tmux_session_name" 2>/dev/null; then
                 tmux_session_name="$raw_tmux_session_name"
             fi
         fi
@@ -112,7 +109,7 @@ if [[ -z "$DISABLE_AUTO_TMUX" ]] && \
 
     echo "tmux session name: $tmux_session_name"
 
-    if ( tmux has-session -t "$tmux_session_name" 2>/dev/null ); then
+    if command tmux has-session -t "$tmux_session_name" 2>/dev/null; then
         echo "Attaching to existing tmux session"
         tmux attach -t "$tmux_session_name" && exit
     else

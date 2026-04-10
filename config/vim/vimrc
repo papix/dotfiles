@@ -60,11 +60,10 @@ set swapfile                    " スワップファイルを作成
 set directory=~/.vim/swap       " スワップファイルディレクトリ
 set undofile                    " アンドゥファイルを作成
 set undodir=~/.vim/undo         " アンドゥファイルディレクトリ
-set viminfo+=n~/.vim/viminfo    " viminfoファイルの場所
-
 " Neovim固有の設定を無効化（Vimでエラーにならないように）
 " -----------------------------------------------------------------------------
 if !has('nvim')
+    set viminfo+=n~/.vim/viminfo    " viminfoファイルの場所
     set ttymouse=xterm2         " マウスサポート（Vimのみ）
     set ttyfast                 " 高速ターミナル接続（Vimのみ）
 endif
@@ -132,10 +131,10 @@ endif
 
 " 見た目の設定
 " -----------------------------------------------------------------------------
-" True Colorの設定を無効化（256色モードを使用）
-" if has('termguicolors')
-"     set termguicolors
-" endif
+" True Colorの設定（利用可能な環境で有効化）
+if has('termguicolors')
+    set termguicolors
+endif
 set t_Co=256                    " 256色モードを強制
 set background=dark             " 背景色を暗く設定
 syntax enable                   " シンタックスハイライトを有効化
@@ -206,7 +205,7 @@ augroup MyAutoCmd
     " ファイルを開いた時に前回の位置に移動
     autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
     " 保存時に行末の空白を削除
-    autocmd BufWritePre * :%s/\s\+$//e
+    autocmd BufWritePre * if &filetype !=# 'markdown' | silent! %s/\s\+$//e | endif
     " 必要なディレクトリを自動作成
     autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
 augroup END
@@ -221,32 +220,7 @@ function! s:auto_mkdir(dir, force)
     endif
 endfunction
 
-" Neovim用の追加設定
-" -----------------------------------------------------------------------------
-if has('nvim')
-    " Neovim固有の設定をここに記述
-    set inccommand=nosplit      " 置換をインタラクティブに表示
-    
-    " より良いデフォルト設定
-    set pumblend=10             " ポップアップメニューの透明度
-    set winblend=10             " ウィンドウの透明度
-    
-    " ターミナルモードの設定
-    tnoremap <Esc> <C-\><C-n>   " ESCでターミナルモードを抜ける
-    
-    " 診断表示の改善
-    set updatetime=300          " より速い診断メッセージの更新
-    
-    " Neovimのプロバイダ設定（パフォーマンス向上）
-    " 使用しないプロバイダは無効化
-    let g:loaded_python_provider = 0
-    let g:loaded_ruby_provider = 0
-    let g:loaded_perl_provider = 0
-    let g:loaded_node_provider = 0
-    
-    " Python3プロバイダのみ有効化（必要に応じて）
-    " let g:python3_host_prog = '/usr/bin/python3'
-endif
+" Neovim固有設定は ~/.config/nvim/init.lua で管理
 
 " プラグイン設定（将来的に追加）
 " -----------------------------------------------------------------------------

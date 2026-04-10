@@ -68,6 +68,7 @@ function for_local() {
     fi
 
     setup_mise
+    setup_anyenv
 
     # ghq
     git config --global ghq.root "$HOME/.ghq"
@@ -97,4 +98,25 @@ TOML
     fi
 
     log_info "mise setup completed."
+}
+
+function setup_anyenv() {
+    if ! command -v anyenv >/dev/null 2>&1; then
+        log_warn "anyenv not found. Skipping anyenv setup."
+        return 0
+    fi
+
+    local anyenv_definition_root="${ANYENV_DEFINITION_ROOT:-${XDG_CONFIG_HOME:-$HOME/.config}/anyenv/anyenv-install}"
+    if [ ! -d "$anyenv_definition_root" ]; then
+        log_action "anyenv: Initializing install manifests..."
+        if ! anyenv install --force-init; then
+            handle_error "anyenv: Failed to initialize install manifests."
+            return 1
+        fi
+        log_info "anyenv: Install manifests initialized at $anyenv_definition_root"
+    else
+        log_info "anyenv: Install manifests already exist."
+    fi
+
+    log_info "anyenv setup completed."
 }

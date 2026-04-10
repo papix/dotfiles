@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
+DOTFILES_DIR="$SCRIPT_DIR"
 SETUP_LIB_DIR="$SCRIPT_DIR/setup/lib"
 # shellcheck disable=SC1091
 source "$SETUP_LIB_DIR/options.sh"
@@ -133,7 +135,6 @@ function main() {
         log_warn "Use --with-hackgen to install HackGen font."
     fi
 
-    PWD=$(pwd)
     local os
     os=$(uname)
 

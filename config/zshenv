@@ -22,6 +22,8 @@ export LSCOLORS=GxfxcxdxCxegedabagacad
 export LS_COLORS='di=1;36:ln=1;35:so=1;32:pi=33:ex=1;32:bd=1;34;46:cd=1;34;43:su=0;41:sg=0;46:tw=0;42:ow=1;34;43'
 
 # zsh
+# グローバルの /etc/z* を読まないため、zsh 起動の最初期で設定する
+setopt no_global_rcs
 export HISTFILE="${HOME}/.zsh_history"
 export HISTSIZE=10000000
 export SAVEHIST=${HISTSIZE}
@@ -36,6 +38,7 @@ export EDITOR='nvim'
 export GIT_EDITOR='nvim'
 
 # pager
+# less の基本オプション
 export LESS='-FRX'
 
 # Perl
@@ -51,6 +54,7 @@ fi
 export DISABLE_TELEMETRY=true
 export DISABLE_ERROR_REPORTING=true
 export DISABLE_BUG_COMMAND=true
+export CLAUDE_ENV_FILE="${HOME}/.config/claude_env.sh"
 
 ########################################
 # Environment
@@ -68,11 +72,60 @@ elif [[ "$TERM_PROGRAM" = "vscode" ]] || [[ -n "$VSCODE_INJECTION" ]]; then
 fi
 # iTerm2は適切なTERMを設定するので、上書きしない
 
-if ( test "$CODESPACES" = "true" ); then
+########################################
+# anyenv (非対話シェル用)
+########################################
+# anyenv の実行ファイルと shims を利用可能にする
+# 対話シェルでも zshenv から読み込まれるため、先に追加しておく
+export ANYENV_ROOT="${ANYENV_ROOT:-${HOME}/.anyenv}"
+typeset -g anyenv_bin_dir=""
+for anyenv_cmd in "${ANYENV_ROOT}/bin/anyenv" "/opt/homebrew/bin/anyenv" "/usr/local/bin/anyenv" "/home/linuxbrew/.linuxbrew/bin/anyenv"; do
+    if [[ -x "$anyenv_cmd" ]]; then
+        anyenv_bin_dir="${anyenv_cmd:h}"
+        break
+    fi
+done
+if [[ -n "$anyenv_bin_dir" ]]; then
+    typeset -gx -U path
+    path=(${anyenv_bin_dir} ${path})
+fi
+if [[ ! -o interactive ]] && [[ -d "${ANYENV_ROOT}/shims" ]]; then
+    typeset -gx -U path
+    path=(${ANYENV_ROOT}/shims ${path})
+fi
+if [[ ! -o interactive ]] && [[ -d "${ANYENV_ROOT}/envs" ]]; then
+    # anyenv 配下の各 env に対応する *_ROOT と bin/shims を追加する
+    typeset anyenv_env_root anyenv_env_name anyenv_env_var
+    for anyenv_env_root in "${ANYENV_ROOT}"/envs/*(N/); do
+        anyenv_env_name="${anyenv_env_root:t}"
+        anyenv_env_var="${${anyenv_env_name:u}//-/_}_ROOT"
+        export "${anyenv_env_var}=${anyenv_env_root}"
+    done
+    unset anyenv_env_root anyenv_env_name anyenv_env_var
+
+    typeset -gx -U path
+    path=(
+        ${ANYENV_ROOT}/envs/*/shims(N-/)
+        ${ANYENV_ROOT}/envs/*/bin(N-/)
+        ${path}
+    )
+fi
+
+########################################
+# mise shims (非対話シェル用)
+########################################
+# Claude Code などの非対話 zsh でツールコマンドを利用可能にする
+# 対話シェルでは 10-env.zsh の mise activate で動的に管理
+if [[ -d "${HOME}/.local/share/mise/shims" ]]; then
+    typeset -gx -U path
+    path=(${HOME}/.local/share/mise/shims ${path})
+fi
+
+if [[ "$CODESPACES" = "true" ]]; then
     # Codespacesの場合
     export SHELL="/usr/bin/zsh"
 
-    export VSCODE_IPC_HOOK_CLI="/tmp/$(ls /tmp -t | grep 'vscode-ipc' | head -n 1)"
+    export VSCODE_IPC_HOOK_CLI=$(find /tmp -maxdepth 1 -name 'vscode-ipc-*' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
 else
     # Codespaces ではない場合
     typeset -gx -U path
@@ -84,7 +137,7 @@ else
     )
 fi
 
-if [ -f "/proc/version" ] && ( grep -q -i "microsoft" /proc/version ); then
+if [[ -f "/proc/version" ]] && grep -q -i "microsoft" /proc/version; then
     # WSL2 の場合
     # XXX: 何故か WSL_DISTRO_NAME が反映されていないことがある。WSL2で動いている場合は「Ubuntu」をセットしておく
     export WSL_DISTRO_NAME=Ubuntu
@@ -92,4 +145,9 @@ if [ -f "/proc/version" ] && ( grep -q -i "microsoft" /proc/version ); then
     # pathを配列として扱い、重複を防ぐ
     path=(${path:#*/.vscode-server/bin/*})
     typeset -gx -U path
+fi
+
+# less colorizer（利用可能な場合のみ有効化）
+if command -v lessfilter >/dev/null 2>&1; then
+    export LESSOPEN='| lessfilter %s'
 fi

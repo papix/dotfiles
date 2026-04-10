@@ -17,7 +17,7 @@ typeset -gA COMMAND_CACHE
 # 10-env.zshで一括チェック
 local commands_to_check=(
     git tmux nvim vim code cursor
-    peco ghq direnv anyenv volta
+    peco ghq direnv mise volta
     docker kubectl terraform
 )
 

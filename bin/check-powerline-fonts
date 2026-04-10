@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Powerlineフォントの表示テストスクリプト
 
 echo "Powerline font test:"

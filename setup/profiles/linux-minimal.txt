@@ -4,3 +4,4 @@ zsh
 tmux
 neovim
 jq
+anyenv

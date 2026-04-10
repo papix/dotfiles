@@ -89,19 +89,11 @@ if [[ -n "$COMMAND_CACHE[colordiff]" ]]; then
   alias diff='colordiff -u'
 fi
 
-if [[ -n "$COMMAND_CACHE[gsed]" ]]; then
-  alias sed='gsed'
-fi
-
 alias gip='curl -s ifconfig.me'
 alias lo='exit 0'
 
-# nodenv優先設定
-# HomebrewのNodeよりもnodenvのNodeを優先させる
-if [[ -d "${HOME}/.anyenv/envs/nodenv/shims" ]]; then
-  alias node="${HOME}/.anyenv/envs/nodenv/shims/node"
-  alias npm="${HOME}/.anyenv/envs/nodenv/shims/npm"
-  alias npx="${HOME}/.anyenv/envs/nodenv/shims/npx"
-  alias yarn="${HOME}/.anyenv/envs/nodenv/shims/yarn"
-  alias pnpm="${HOME}/.anyenv/envs/nodenv/shims/pnpm"
+# pbcopy互換エイリアス
+# pbcopyがない環境でcopy-to-clipboardを使用
+if ! command -v pbcopy >/dev/null 2>&1; then
+  alias pbcopy='copy-to-clipboard'
 fi

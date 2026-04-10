@@ -5,16 +5,13 @@
 # 依存: 00-init.zsh (COMMAND_CACHEのため)
 
 # macOSでのみ読み込み
-[[ "$(uname)" != "Darwin" ]] && return
+[[ "$OSTYPE" != darwin* ]] && return
 
 # Homebrew設定（Apple Silicon / Intel Mac対応）
 if [[ -x /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [[ -x /usr/local/bin/brew ]]; then
     eval "$(/usr/local/bin/brew shellenv)"
-fi
-if (( $+functions[ensure_nodenv_shims_first] )); then
-    ensure_nodenv_shims_first
 fi
 
 # macOS specific aliases

@@ -17,7 +17,8 @@ zshの設定を機能別に分割し、管理しやすくしました。`~/.conf
 ├── 80-peco.zsh       # peco関連の関数
 ├── 81-git.zsh        # Git関連の関数
 ├── 82-tmux.zsh       # tmux統合
-└── 90-external.zsh   # 外部ツールの設定
+├── 90-external.zsh   # 外部ツールの設定
+└── 91-interactive-plugins.zsh # 補助プラグイン読み込み
 ```
 
 ## 各ファイルの説明
@@ -28,7 +29,7 @@ zshの設定を機能別に分割し、管理しやすくしました。`~/.conf
 
 ### 10-env.zsh
 - 環境変数設定（GOPATH、言語設定など）
-- Homebrew、anyenv、direnvの初期化
+- Homebrew、mise、direnvの初期化
 - fpath設定
 
 ### 20-colors.zsh
@@ -80,6 +81,11 @@ zshの設定を機能別に分割し、管理しやすくしました。`~/.conf
 - 外部ツールの設定
   - Rancher Desktop
   - Bun
+
+### 91-interactive-plugins.zsh
+- `zsh-autosuggestions` の読み込み
+- `zsh-syntax-highlighting` の読み込み
+- 非対話シェルでは無効化
 
 ## カスタマイズ方法
 

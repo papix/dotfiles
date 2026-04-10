@@ -14,7 +14,7 @@ bindkey '^u' cdup
 
 # エポック時間を人間が読める形式に変換
 function epoch() {
-    if ( test -n "$1" ); then;
+    if [[ $# -gt 0 ]]; then
         local format='+%Y-%m-%dT%H:%M:%S%z (%Z)'
         case $(uname) in
             Darwin)
@@ -31,10 +31,10 @@ function epoch() {
 
 # OSC52を使用したクリップボードコピー
 function copy-to-clipboard() {
-    local external
+    local external payload b64_payload
     external=$(whence -p copy-to-clipboard 2>/dev/null || true)
     if [[ -n "$external" ]]; then
-        if ( test "$#" = 0 ); then
+        if [[ $# -eq 0 ]]; then
             cat - | command copy-to-clipboard
         else
             printf '%s' "$1" | command copy-to-clipboard
@@ -42,7 +42,7 @@ function copy-to-clipboard() {
         return
     fi
 
-    if ( test "$#" = 0 ); then
+    if [[ $# -eq 0 ]]; then
         payload=$(cat -)
     else
         payload=$(echo -n "$1")
@@ -69,3 +69,20 @@ function copy-to-clipboard() {
 }
 
 # Codespaces固有の関数は15-platform-codespaces.zshに移動
+
+# compinit関連のセキュリティチェック
+function zsh-compaudit-check() {
+    autoload -Uz compaudit
+
+    local -a insecure_dirs
+    insecure_dirs=("${(@f)$(compaudit 2>/dev/null)}")
+
+    if (( ${#insecure_dirs} == 0 )); then
+        echo "compaudit: no insecure directories found"
+        return 0
+    fi
+
+    echo "compaudit: insecure directories detected"
+    printf '%s\n' "${insecure_dirs[@]}"
+    return 1
+}

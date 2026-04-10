@@ -1,40 +1,99 @@
-#!/bin/bash
-# クリップボードコピースクリプト（OSC52フォールバック付き）
-# 優先順位: pbcopy > xclip > wl-copy > OSC52
+#!/usr/bin/env bash
+set -euo pipefail
+# クリップボードコピースクリプト（OSC52優先 + フォールバック）
+# リモート環境を優先し、必要に応じてローカル手段にフォールバックする
 
-# 標準入力を読み込む
-input=$(cat)
+read_input() {
+    if [[ $# -gt 0 ]]; then
+        printf '%s' "$1"
+        return 0
+    fi
 
-# macOS
-if command -v pbcopy >/dev/null 2>&1; then
-    printf '%s' "$input" | pbcopy
-    exit 0
-fi
+    if [[ -t 0 ]]; then
+        printf ''
+        return 0
+    fi
 
-# Linux X11 (xclip)
-if command -v xclip >/dev/null 2>&1 && [ -n "$DISPLAY" ]; then
-    printf '%s' "$input" | xclip -selection clipboard
-    exit 0
-fi
+    cat
+}
 
-# Linux Wayland (wl-copy)
-if command -v wl-copy >/dev/null 2>&1 && [ -n "$WAYLAND_DISPLAY" ]; then
-    printf '%s' "$input" | wl-copy
-    exit 0
-fi
+can_use_osc52() {
+    if [[ -n "${DISABLE_OSC52:-}" ]]; then
+        return 1
+    fi
+    if ! command -v base64 >/dev/null 2>&1; then
+        return 1
+    fi
+    if ! [[ -t 1 ]]; then
+        return 1
+    fi
+    case "${TERM:-}" in
+        ""|dumb|unknown)
+            return 1
+            ;;
+    esac
+    return 0
+}
 
-# OSC52フォールバック（ターミナルエミュレータ経由）
-# SSH接続やXなし環境でも動作
 osc52_copy() {
+    local input="$1"
+    can_use_osc52 || return 1
+
     local encoded
     encoded=$(printf '%s' "$input" | base64 | tr -d '\n')
 
     # tmux環境ではpassthroughシーケンスでラップ
-    if [ -n "$TMUX" ]; then
-        printf '\033Ptmux;\033\033]52;c;%s\033\033\\\033\\' "$encoded"
+    if [[ -n "${TMUX:-}" ]]; then
+        printf '%b' "\033Ptmux;\033\033]52;c;${encoded}\033\033\\\033\\"
     else
-        printf '\033]52;c;%s\033\\' "$encoded"
+        printf '%b' "\033]52;c;${encoded}\033\\"
     fi
+    return 0
 }
 
-osc52_copy
+copy_with_fallback() {
+    local input="$1"
+
+    # macOS
+    if command -v pbcopy >/dev/null 2>&1; then
+        printf '%s' "$input" | pbcopy
+        return 0
+    fi
+
+    # Linux X11 (xclip)
+    if command -v xclip >/dev/null 2>&1 && [[ -n "${DISPLAY:-}" ]]; then
+        printf '%s' "$input" | xclip -selection clipboard
+        return 0
+    fi
+
+    # Linux Wayland (wl-copy)
+    if command -v wl-copy >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        printf '%s' "$input" | wl-copy
+        return 0
+    fi
+
+    return 1
+}
+
+main() {
+    local input
+    if [[ $# -gt 0 ]]; then
+        input="$(read_input "$1")"
+    else
+        input="$(read_input)"
+    fi
+
+    # OSC52を優先し、失敗時はローカル手段にフォールバック
+    if osc52_copy "$input"; then
+        return 0
+    fi
+
+    if copy_with_fallback "$input"; then
+        return 0
+    fi
+
+    echo "[ERROR] Clipboard copy failed. No supported method available." >&2
+    return 1
+}
+
+main "$@"

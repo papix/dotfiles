@@ -3,9 +3,6 @@
 # シェルオプション
 ########################################
 
-# ref: http://karur4n.hatenablog.com/entry/2016/01/18/100000
-setopt no_global_rcs
-
 # ビープ音を無効化
 setopt nobeep
 setopt nolistbeep
@@ -22,6 +19,9 @@ bindkey '^j' down-line-or-history
 setopt extended_history
 setopt hist_expand
 setopt hist_ignore_all_dups
+setopt hist_expire_dups_first
+setopt hist_ignore_space
 setopt hist_no_store
+setopt hist_verify
 setopt share_history
 setopt hist_reduce_blanks

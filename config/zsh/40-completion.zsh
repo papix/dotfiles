@@ -3,7 +3,13 @@
 # 補完設定
 ########################################
 
-autoload -Uz compinit && compinit
+autoload -Uz compinit
+
+typeset -g ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+if [[ ! -d "${ZSH_COMPDUMP:h}" ]]; then
+    mkdir -p "${ZSH_COMPDUMP:h}" 2>/dev/null
+fi
+compinit -d "${ZSH_COMPDUMP}"
 
 # 補完オプション
 setopt auto_list

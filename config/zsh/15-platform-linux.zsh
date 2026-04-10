@@ -4,17 +4,19 @@
 ########################################
 
 # Linuxでのみ読み込み
-[[ "$(uname)" != "Linux" ]] && return
+[[ "$OSTYPE" != linux* ]] && return
 
 # Linux固有エイリアス
 alias ls='ls --color'
 
 # Linux Homebrew設定（存在する場合）
-if [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
+if [[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [[ -d "$HOME/.linuxbrew" ]]; then
-    eval "$($HOME/.linuxbrew/bin/brew shellenv)"
 fi
-if (( $+functions[ensure_nodenv_shims_first] )); then
-    ensure_nodenv_shims_first
+
+# brew shellenv がPATH先頭にHomebrewを追加するため、mise shimsを再先頭に配置
+# （mise activate / mise shims がHomebrewより優先されるようにする）
+if [[ -d "${HOME}/.local/share/mise/shims" ]]; then
+    typeset -gx -U path
+    path=("${HOME}/.local/share/mise/shims" ${path})
 fi

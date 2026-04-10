@@ -37,9 +37,56 @@ function git-default-branch() {
     echo "main"
 }
 
+# ブランチに切り替え（worktree対応・サブディレクトリ維持）
+# 使用法: git-switch-branch <branch-name>
+# 戻り値: 成功時0、失敗時1
+# 出力: worktree移動時は移動先パスを出力（peco-branch用）
+function __git_branch_worktree_path() {
+    local branch="$1"
+    git for-each-ref --format=$'%(refname:short)\t%(worktreepath)' refs/heads 2>/dev/null \
+        | awk -F'\t' -v branch="${branch}" '$1 == branch {print $2}'
+}
+
+function __git_target_path_for_worktree() {
+    local worktree_path="$1"
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+
+    local rel_path="${PWD#${repo_root}}"
+    if [[ -n "${rel_path}" && -d "${worktree_path}${rel_path}" ]]; then
+        echo "${worktree_path}${rel_path}"
+        return 0
+    fi
+
+    echo "${worktree_path}"
+}
+
+function git-switch-branch() {
+    local branch="${1:-}"
+    if [[ -z "${branch}" ]]; then
+        echo "Usage: git-switch-branch <branch-name>" >&2
+        return 1
+    fi
+
+    local worktree_path
+    worktree_path=$(__git_branch_worktree_path "${branch}")
+
+    if [[ -n "${worktree_path}" && -d "${worktree_path}" ]]; then
+        # 別のworktreeでチェックアウト済み → そのディレクトリに移動
+        # 現在のサブディレクトリを維持する
+        local target_path
+        target_path=$(__git_target_path_for_worktree "${worktree_path}")
+        echo "${target_path}"  # peco-branch用に出力
+        builtin cd -- "${target_path}"
+    else
+        # 通常のチェックアウト
+        git checkout "${branch}"
+    fi
+}
+
 # main/masterブランチにチェックアウト
 function git-checkout-main() {
-    git checkout $(git-default-branch)
+    git-switch-branch "$(git-default-branch)"
 }
 
 # マージ済みブランチを削除
@@ -156,15 +203,34 @@ bindkey '^p' git-root
 
 # pecoでGitブランチを選択
 function peco-branch() {
-    local selected_branch=$(git branch | peco --prompt "BRANCH >" | head -n 1 | sed -e "s/^\*//g" | sed -e "s/ //g")
-    if ( test -n "${selected_branch}" ); then
-        if ( test -n "${BUFFER}" ); then
-            local cmd=$(echo ${BUFFER} | sed -e "s/ $//g")
+    # git for-each-ref を使用（color.branch=always のANSIコード混入を回避）
+    local selected_branch=$(git for-each-ref --format='%(refname:short)' refs/heads \
+        | peco --prompt "BRANCH >" | head -n 1)
+    if [[ -n "${selected_branch}" ]]; then
+        if [[ -n "${BUFFER}" ]]; then
+            local cmd="${BUFFER%% }"
             BUFFER="${cmd} ${selected_branch}"
             CURSOR="${#BUFFER}"
         else
-            BUFFER="git checkout ${selected_branch}"
-            zle accept-line
+            # git-switch-branchの出力を取得（worktree移動時はパス、通常時は空）
+            local switch_output
+            switch_output=$(git-switch-branch "${selected_branch}" 2>&1)
+            local exit_code=$?
+
+            if [[ ${exit_code} -eq 0 ]]; then
+                if [[ -n "${switch_output}" && -d "${switch_output}" ]]; then
+                    # worktree移動の場合
+                    BUFFER="cd ${(q)switch_output}"
+                    zle accept-line
+                else
+                    # 通常のcheckout完了
+                    zle reset-prompt
+                fi
+            else
+                # 失敗時はエラーを表示
+                echo "${switch_output}" >&2
+                zle reset-prompt
+            fi
         fi
     fi
 }
@@ -197,9 +263,39 @@ function peco-difit() {
     local selected_commit
     selected_commit=$(printf "%s\n" "$selected" | head -n 2 | awk '{print $1}')
     local difit_args=($(printf "%s\n" "$selected_commit" | tr '\n' ' '))
-    if ( test -n "${difit_args}" ); then
+    if [[ -n "${selected_commit}" ]]; then
         printf "%s\n" "$selected"
         npx difit --port 1111 $difit_args
     fi
 }
 alias pifit='peco-difit'
+
+# pecoでブランチを選択して削除
+function peco-delete-branch() {
+    inside-git-repository || return
+
+    # * と + がついていないブランチをフィルタリング
+    # git branch の出力形式: "  branch-name" or "* current" or "+ worktree"
+    local -a branches=($(git branch | grep -v '^[*+]' | sed 's/^  //' | peco --prompt 'DELETE BRANCH >'))
+
+    if [[ ${#branches[@]} -eq 0 ]]; then
+        return
+    fi
+
+    # 確認プロンプト
+    echo "The following branches will be deleted:"
+    for branch in "${branches[@]}"; do
+        echo "  - ${branch}"
+    done
+    echo -n "Are you sure? [y/N] "
+    read -r confirm
+    if [[ "${confirm}" != [yY] ]]; then
+        echo "Cancelled" >&2
+        return
+    fi
+
+    # 削除実行
+    for branch in "${branches[@]}"; do
+        git branch -D "${branch}"
+    done
+}

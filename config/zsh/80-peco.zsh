@@ -29,7 +29,7 @@ function peco-file() {
         return 1
     fi
     
-    if ( test -n "${BUFFER}" ); then
+    if [[ -n "${BUFFER}" ]]; then
         local selected_files
         selected_files=$(ag -l | sort | peco --prompt 'FILE >' | while IFS= read -r f; do printf '%q ' "$f"; done)
         local cmd="${BUFFER% }"
@@ -38,7 +38,7 @@ function peco-file() {
     else
         local selected
         selected=$(ag -l | sort | peco --prompt 'FILE >')
-        if ( test -n "${selected}" ); then
+        if [[ -n "${selected}" ]]; then
             local -a editor_cmd
             editor_cmd=(${(z)EDITOR})
             if (( ${#editor_cmd[@]} == 0 )); then
@@ -53,13 +53,66 @@ function peco-file() {
 zle -N peco-file
 bindkey '^f' peco-file
 
+# pecoでファイルを検索してnvimの閲覧専用モードで開く
+function peco-file-less() {
+    # Gitリポジトリ内か確認
+    if ! inside-git-repository; then
+        echo "Error: peco-file-less (Ctrl+G / Alt+F) can only be used inside a Git repository" >&2
+        return 1
+    fi
+
+    if [[ -n "${BUFFER}" ]]; then
+        local selected_files
+        selected_files=$(ag -l | sort | peco --prompt 'FILE >' | while IFS= read -r f; do printf '%q ' "$f"; done)
+        local cmd="${BUFFER% }"
+        BUFFER="${cmd} ${selected_files}"
+        CURSOR="${#BUFFER}"
+    else
+        local selected
+        selected=$(ag -l | sort | peco --prompt 'FILE >')
+        if [[ -n "${selected}" ]]; then
+            local -a files
+            files=("${(@f)selected}")
+            command nvim -R -n -i NONE -c 'setlocal readonly nomodifiable nomodified' -- "${files[@]}"
+        fi
+    fi
+}
+zle -N peco-file-less
+
+# Ctrl+G をメインに割り当て
+bindkey '^g' peco-file-less
+
+# フォールバック: Alt+F は多くの端末で安定して受け取れる
+bindkey '^[f' peco-file-less
+
 # 内容を検索してファイルを開く
 function pero() {
-    if [[ "${EDITOR}" = "code" || "${EDITOR}" = "cursor" ]]; then
-        ( ag "${@}" . | peco --exec 'head -n 1 | awk -F : '"'"'{print "-g " $1 ":" $2}'"'"' | xargs -o ${EDITOR}' )
-    else
-        ( ag "${@}" . | peco --exec 'head -n 1 | awk -F : '"'"'{print "+" $2 " " $1}'"'"' | xargs -o ${EDITOR}' )
+    local selected
+    selected=$(ag "${@}" . | peco | head -n 1)
+    if [[ -z "${selected}" ]]; then
+        return 0
     fi
+
+    local file line editor_name
+    file="${selected%%:*}"
+    line="${selected#*:}"
+    line="${line%%:*}"
+
+    local -a editor_cmd
+    editor_cmd=(${(z)EDITOR})
+    if (( ${#editor_cmd[@]} == 0 )); then
+        return 1
+    fi
+
+    editor_name="${editor_cmd[1]:t}"
+    case "${editor_name}" in
+        code|cursor)
+            command "${editor_cmd[@]}" -g "${file}:${line}"
+            ;;
+        *)
+            command "${editor_cmd[@]}" "+${line}" "${file}"
+            ;;
+    esac
 }
 
 # pecoでSSHホストを選択
@@ -83,8 +136,8 @@ function peco-src() {
         return 1
     fi
     local selected_repos=$(ghq list --full-path | roots | grep -v "/.next"| peco --prompt 'REPOSITORY >' | head -n 1)
-    if ( test -n "$selected_repos" ); then
-        BUFFER="cd ${selected_repos}"
+    if [[ -n "$selected_repos" ]]; then
+        BUFFER="cd ${(q)selected_repos}"
         zle accept-line
         zle clear-screen
     fi

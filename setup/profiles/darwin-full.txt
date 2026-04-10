@@ -18,7 +18,9 @@ gh
 gitleaks
 chezmoi
 ghq
+d-kuro/tap/gwq
 mise
+anyenv
 coreutils
 golang
 direnv

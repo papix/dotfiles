@@ -2,7 +2,8 @@
 set -euo pipefail
 
 function set_config_file() {
-    SOURCE="${PWD}$1"
+    local SOURCE DEST DEST_DIR READLINK
+    SOURCE="${DOTFILES_DIR}$1"
     DEST="${HOME}$2"
 
     # ソースファイルの存在確認
@@ -66,7 +67,7 @@ function setup_tmux_config() {
     if [[ -d "${HOME}/.tmux/plugins/tmux-powerline/segments" ]]; then
         log_action "tmux-powerline: Linking custom segments..."
         # Create a symbolic link for each custom segment
-        for segment in "${PWD}"/config/tmux-powerline/segments/*.sh; do
+        for segment in "${DOTFILES_DIR}"/config/tmux-powerline/segments/*.sh; do
             if [[ -f "$segment" ]]; then
                 segment_name=$(basename "$segment")
                 ln -sf "$segment" "${HOME}/.tmux/plugins/tmux-powerline/segments/${segment_name}"
@@ -135,7 +136,7 @@ function setup_vim_config() {
     mkdir -p "${HOME}/.vim"
 
     # Link vim configuration directories (only colors for custom themes)
-    if [[ -d "${PWD}/config/vim/vim/colors" ]]; then
+    if [[ -d "${DOTFILES_DIR}/config/vim/vim/colors" ]]; then
         set_config_file "/config/vim/vim/colors" "/.vim/colors"
     fi
 
@@ -151,8 +152,8 @@ function setup_neovim_config() {
     set_config_file "/config/nvim/init.lua" "/.config/nvim/init.lua"
     set_config_file "/config/nvim/lua" "/.config/nvim/lua"
 
-    # 互換用: init.vim が未配置の場合のみ ~/.vimrc を参照
-    if [[ ! -e "${HOME}/.config/nvim/init.vim" ]]; then
+    # 互換用: init.vim と init.lua の両方が未配置の場合のみ ~/.vimrc を参照
+    if [[ ! -e "${HOME}/.config/nvim/init.vim" && ! -e "${HOME}/.config/nvim/init.lua" ]]; then
         ln -s "${HOME}/.vimrc" "${HOME}/.config/nvim/init.vim"
         log_info "Neovim: Created fallback symlink: ~/.config/nvim/init.vim => ~/.vimrc"
     fi
@@ -161,7 +162,7 @@ function setup_neovim_config() {
 function setup_zsh_config() {
     # Setup zsh modules
     mkdir -p "${HOME}/.config"
-    if [[ -d "${PWD}/config/zsh" ]]; then
+    if [[ -d "${DOTFILES_DIR}/config/zsh" ]]; then
         # Backup existing directory if not a symlink
         if [[ -e "${HOME}/.config/zsh" ]] && [[ ! -L "${HOME}/.config/zsh" ]]; then
             mv "${HOME}/.config/zsh" "${HOME}/.config/zsh.backup.$(date +%Y%m%d%H%M%S)"
@@ -170,9 +171,18 @@ function setup_zsh_config() {
             rm "${HOME}/.config/zsh"
         fi
         # Create symlink instead of copying
-        ln -s "${PWD}/config/zsh" "${HOME}/.config/zsh"
-        log_info "zsh modules: ${PWD}/config/zsh => ${HOME}/.config/zsh (symlink)"
+        ln -s "${DOTFILES_DIR}/config/zsh" "${HOME}/.config/zsh"
+        log_info "zsh modules: ${DOTFILES_DIR}/config/zsh => ${HOME}/.config/zsh (symlink)"
     fi
+}
+
+function setup_gwq_config() {
+    if [[ -e "${HOME}/.config/gwq/config.toml" && ! -L "${HOME}/.config/gwq/config.toml" ]]; then
+        mv "${HOME}/.config/gwq/config.toml" "${HOME}/.config/gwq/config.toml.backup.$(date +%Y%m%d%H%M%S)"
+        log_info "gwq config: Backed up existing config"
+    fi
+    mkdir -p "${HOME}/.config/gwq"
+    set_config_file "/config/gwq/config.toml" "/.config/gwq/config.toml"
 }
 
 function common() {
@@ -187,12 +197,13 @@ function common() {
     set_config_file "/config/peco/config.json" "/.config/peco/config.json"
     set_config_file "/config/tigrc" "/.tigrc"
 
+    setup_gwq_config
     setup_git_config
     setup_vim_config
     setup_neovim_config
     setup_zsh_config
 
-    # Setup bin directory - PATH is now configured in zsh/05-path.zsh
+    # Setup bin directory - PATH is now configured in config/zshenv
     # No need to create symlinks since we're using PATH
-    log_info "bin directory: PATH will be configured via zsh/05-path.zsh"
+    log_info "bin directory: PATH will be configured via config/zshenv"
 }

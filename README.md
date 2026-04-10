@@ -24,6 +24,16 @@ $ bash setup.sh
 | `ALLOW_HOMEBREW_INSTALL=1` | Homebrew 公式インストーラの実行を許可（Linux） |
 | `DISABLE_AUTO_TMUX=1` | tmux 自動起動を無効化 |
 
+### Git hooks
+
+- `pre-commit`: `lint-shell` と `gitleaks` を実行します。
+- `pre-push`: push 対象コミットに対して `gitleaks` を実行します。
+- 既存リポジトリに適用する場合は、各リポジトリで `git init` を実行してください。
+
+## 便利コマンド
+
+- `vless <file...>`: nvim の閲覧専用モードで開き、外部更新時は自動で再読込します。
+
 ## 破壊的変更 (Breaking Changes)
 
 ### v2.0 (2025-12)
