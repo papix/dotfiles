@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly DEFAULT_MIN_INTERVAL=15
+readonly DEFAULT_SKIP_FOCUSED=1
+readonly DEFAULT_STATE_DIR_FALLBACK="${HOME}/.cache/tmux-alert-notify"
+
+is_enabled() {
+    case "${1:-}" in
+    1 | true | TRUE | yes | YES | on | ON)
+        return 0
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+}
+
+is_non_negative_integer() {
+    [[ "${1:-}" =~ ^[0-9]+$ ]]
+}
+
+build_state_file_path() {
+    local event="$1"
+    local session_name="$2"
+    local window_index="$3"
+    local pane_index="$4"
+    local state_dir="$5"
+    local key
+
+    key="$(printf '%s' "${event}__${session_name}__${window_index}__${pane_index}" | tr -c '[:alnum:]._-' '_')"
+    printf '%s/%s.ts' "$state_dir" "$key"
+}
+
+should_rate_limit() {
+    local state_file="$1"
+    local min_interval="$2"
+    local now_epoch="$3"
+    local last_epoch
+
+    if ((min_interval <= 0)); then
+        return 1
+    fi
+
+    if [[ ! -f "$state_file" ]]; then
+        return 1
+    fi
+
+    last_epoch="$(cat "$state_file" 2>/dev/null || true)"
+    if ! is_non_negative_integer "$last_epoch"; then
+        return 1
+    fi
+
+    if ((now_epoch - last_epoch < min_interval)); then
+        return 0
+    fi
+
+    return 1
+}
+
+notify_with_terminal_notifier() {
+    local title="$1"
+    local message="$2"
+    local group="$3"
+
+    if ! command -v terminal-notifier >/dev/null 2>&1; then
+        return 1
+    fi
+
+    terminal-notifier \
+        -title "$title" \
+        -message "$message" \
+        -group "$group" \
+        -sender "com.googlecode.iterm2" \
+        >/dev/null 2>&1
+}
+
+notify_with_notify_send() {
+    local title="$1"
+    local message="$2"
+    local group="$3"
+
+    if ! command -v notify-send >/dev/null 2>&1; then
+        return 1
+    fi
+
+    notify-send \
+        -a tmux \
+        -u normal \
+        -h "string:x-canonical-private-synchronous:${group}" \
+        "$title" \
+        "$message" \
+        >/dev/null 2>&1
+}
+
+notify_with_osascript() {
+    local title="$1"
+    local message="$2"
+    local escaped_title
+    local escaped_message
+
+    if ! command -v osascript >/dev/null 2>&1; then
+        return 1
+    fi
+
+    escaped_title="$(printf '%s' "$title" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    escaped_message="$(printf '%s' "$message" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+
+    osascript \
+        -e "display notification \"${escaped_message}\" with title \"${escaped_title}\"" \
+        >/dev/null 2>&1
+}
+
+fallback_tmux_message() {
+    local title="$1"
+    local message="$2"
+
+    if ! command -v tmux >/dev/null 2>&1; then
+        return 1
+    fi
+
+    tmux display-message "${title} | ${message}" >/dev/null 2>&1 || true
+}
+
+main() {
+    local event="${1:-unknown}"
+    local session_name="${2:-unknown}"
+    local window_index="${3:-?}"
+    local window_name="${4:-unknown}"
+    local pane_index="${5:-?}"
+    local pane_title="${6:-unknown}"
+    local pane_path="${7:-unknown}"
+    local pane_command="${8:-unknown}"
+    local window_flags="${9:-}"
+    local skip_focused="${TMUX_ALERT_NOTIFY_SKIP_FOCUSED:-$DEFAULT_SKIP_FOCUSED}"
+    local min_interval="${TMUX_ALERT_NOTIFY_MIN_INTERVAL:-$DEFAULT_MIN_INTERVAL}"
+    local state_dir="${TMUX_ALERT_NOTIFY_STATE_DIR:-${XDG_RUNTIME_DIR:-$DEFAULT_STATE_DIR_FALLBACK}}"
+    local state_file
+    local now_epoch
+    local now_local
+    local title
+    local message
+    local group
+
+    if is_enabled "${TMUX_ALERT_NOTIFY_DISABLE:-1}"; then
+        exit 0
+    fi
+
+    if is_enabled "$skip_focused" && [[ "$window_flags" == *"*"* ]]; then
+        exit 0
+    fi
+
+    if ! is_non_negative_integer "$min_interval"; then
+        min_interval="$DEFAULT_MIN_INTERVAL"
+    fi
+
+    mkdir -p "$state_dir"
+    state_file="$(build_state_file_path "$event" "$session_name" "$window_index" "$pane_index" "$state_dir")"
+    now_epoch="$(date +%s)"
+
+    if should_rate_limit "$state_file" "$min_interval" "$now_epoch"; then
+        exit 0
+    fi
+    printf '%s\n' "$now_epoch" >"$state_file"
+
+    now_local="$(date '+%Y-%m-%d %H:%M:%S %z')"
+    title="tmux ${event}: ${session_name}:${window_index} ${window_name}"
+    message="pane=${pane_index} (${pane_command}), title=${pane_title}, path=${pane_path}, at=${now_local}"
+    group="$(printf 'tmux-%s-%s-%s' "$event" "$session_name" "$window_index" | sed 's/[^[:alnum:]_.-]/_/g')"
+
+    if is_enabled "${TMUX_ALERT_NOTIFY_DRY_RUN:-0}"; then
+        printf 'event=%s\n' "$event"
+        printf 'session=%s\n' "$session_name"
+        printf 'window=%s:%s\n' "$window_index" "$window_name"
+        printf 'pane=%s (%s)\n' "$pane_index" "$pane_command"
+        printf 'path=%s\n' "$pane_path"
+        printf 'title=%s\n' "$title"
+        printf 'message=%s\n' "$message"
+        exit 0
+    fi
+
+    if notify_with_terminal_notifier "$title" "$message" "$group"; then
+        exit 0
+    fi
+
+    if notify_with_notify_send "$title" "$message" "$group"; then
+        exit 0
+    fi
+
+    if notify_with_osascript "$title" "$message"; then
+        exit 0
+    fi
+
+    fallback_tmux_message "$title" "$message" || true
+}
+
+main "$@"

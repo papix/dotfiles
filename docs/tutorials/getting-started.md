@@ -122,5 +122,4 @@ brew install peco
 
 1. エラーメッセージを確認
 2. `setup.sh`のログを確認
-3. [トラブルシューティングガイド](../how-to/troubleshooting.md)を参照
-4. それでも解決しない場合は、GitHubでIssueを作成
+3. それでも解決しない場合は、GitHubでIssueを作成

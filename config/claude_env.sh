@@ -64,3 +64,8 @@ if [ -d "$HOME/.local/share/mise/shims" ]; then
     *) export PATH="$HOME/.local/share/mise/shims:$PATH" ;;
     esac
 fi
+
+# Git worktree base directory
+if [ -z "$WORKTREE_BASE_DIR" ]; then
+    export WORKTREE_BASE_DIR="$HOME/.worktrees"
+fi

@@ -18,8 +18,6 @@
 ### [reference/](./reference/)
 技術仕様とAPI参照。
 
-- [zsh-modules/](./reference/zsh-modules/) - Zshモジュール仕様
-- [commands/](./reference/commands/) - コマンドリファレンス
 - [environment-variables.md](./reference/environment-variables.md) - 環境変数一覧
 
 ### [explanation/](./explanation/)
@@ -34,9 +32,6 @@
 - [coding.md](./standards/coding.md) - コーディング規約
 - [git.md](./standards/git.md) - Git使用規約
 - [security.md](./standards/security.md) - セキュリティガイドライン
-
-### [templates/](./templates/)
-再利用可能なテンプレート。
 
 ## クイックリンク
 

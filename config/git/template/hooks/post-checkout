@@ -1,0 +1,56 @@
+#!/bin/sh
+# worktree 作成時に .worktree-sync に記載されたファイルを元リポジトリからコピーする
+
+old_ref="$1"
+
+is_safe_entry() {
+    case "$1" in
+    .. | ../* | */.. | */../*) return 1 ;;
+    *) return 0 ;;
+    esac
+}
+
+# worktree 作成の検出: old_ref が null-ref のとき
+case "$old_ref" in
+0000000000000000000000000000000000000000) ;;
+*) exit 0 ;;
+esac
+
+# メインリポジトリのルートを取得
+common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || exit 0
+main_worktree="$(cd "$common_dir/.." && pwd)"
+
+# 現在の worktree のルート
+current_worktree="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+# メインと同じなら何もしない
+[ "$main_worktree" = "$current_worktree" ] && exit 0
+
+# .worktree-sync が存在しなければ終了
+[ -f "$main_worktree/.worktree-sync" ] || exit 0
+
+# ファイルをコピー（既存ファイルは上書きしない）
+copied=0
+while IFS= read -r entry || [ -n "$entry" ]; do
+    # 空行・コメント行をスキップ
+    case "$entry" in
+    "" | \#*) continue ;;
+    esac
+    if ! is_safe_entry "$entry"; then
+        echo "[post-checkout] Skipped unsafe path: $entry" >&2
+        continue
+    fi
+    [ -f "$main_worktree/$entry" ] || continue
+    if [ ! -e "$current_worktree/$entry" ]; then
+        # サブディレクトリがあれば作成
+        entry_dir="$(dirname "$entry")"
+        [ "$entry_dir" != "." ] && mkdir -p "$current_worktree/$entry_dir"
+        cp "$main_worktree/$entry" "$current_worktree/$entry"
+        echo "[post-checkout] Copied $entry from main worktree"
+        copied=$((copied + 1))
+    fi
+done <"$main_worktree/.worktree-sync"
+
+if [ "$copied" -gt 0 ]; then
+    echo "[post-checkout] $copied file(s) copied to new worktree"
+fi

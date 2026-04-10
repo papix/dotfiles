@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+window_target="${1:-}"
+[[ -n "$window_target" ]] || exit 0
+
+[[ -f "${HOME}/.config/zsh/functions/tmux-git-window-name" ]] || exit 0
+
+source "${HOME}/.config/zsh/functions/tmux-git-window-name"
+tmux_git_window_name_refresh_window "$window_target" >/dev/null 2>&1 || exit 0
