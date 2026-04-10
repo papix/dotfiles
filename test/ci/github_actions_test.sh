@@ -31,6 +31,24 @@ assert_matches() {
     fi
 }
 
+assert_checkout_actions_are_pinned() {
+    local file="$1"
+    local checkout_count pinned_checkout_count
+
+    checkout_count="$(grep -Ec 'uses:[[:space:]]+actions/checkout@' "$file" || true)"
+    pinned_checkout_count="$(grep -Ec 'uses:[[:space:]]+actions/checkout@[0-9a-f]{40}$' "$file" || true)"
+
+    if [[ "$checkout_count" -eq 0 ]]; then
+        echo "ASSERTION FAILED: expected at least one actions/checkout use in $file" >&2
+        return 1
+    fi
+
+    if [[ "$checkout_count" -ne "$pinned_checkout_count" ]]; then
+        echo "ASSERTION FAILED: expected all actions/checkout uses to be pinned by full SHA in $file" >&2
+        return 1
+    fi
+}
+
 if [[ ! -f "$WORKFLOW" ]]; then
     echo "ASSERTION FAILED: expected workflow file $WORKFLOW" >&2
     exit 1
@@ -45,12 +63,18 @@ assert_contains 'permissions:' "$WORKFLOW"
 assert_contains 'contents: read' "$WORKFLOW"
 assert_contains 'concurrency:' "$WORKFLOW"
 assert_contains 'cancel-in-progress: true' "$WORKFLOW"
+assert_contains '  secret-scan:' "$WORKFLOW"
+assert_contains '  test-and-lint:' "$WORKFLOW"
 assert_contains 'strategy:' "$WORKFLOW"
 assert_contains 'matrix:' "$WORKFLOW"
 assert_contains 'os: [ubuntu-latest, macos-latest]' "$WORKFLOW"
 assert_contains 'timeout-minutes:' "$WORKFLOW"
-assert_matches 'uses:[[:space:]]+actions/checkout@[0-9a-f]{40}' "$WORKFLOW"
+assert_checkout_actions_are_pinned "$WORKFLOW"
 assert_not_contains 'uses: actions/checkout@v4' "$WORKFLOW"
+assert_contains 'fetch-depth: 0' "$WORKFLOW"
+assert_contains 'sudo apt-get install -y gitleaks' "$WORKFLOW"
+assert_contains 'gitleaks dir . --redact' "$WORKFLOW"
+assert_contains 'gitleaks git --redact' "$WORKFLOW"
 assert_contains 'bash test/run.sh' "$WORKFLOW"
 assert_contains 'bash bin/lint-shell' "$WORKFLOW"
 assert_contains 'shfmt -d' "$WORKFLOW"

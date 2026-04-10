@@ -44,6 +44,14 @@ function peco() { cat }
 
 source "$ROOT_DIR/config/zsh/81-git.zsh"
 
+function init_test_repo() {
+    local repo_path="$1"
+
+    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git -C "${repo_path}" init -q
+    git -C "${repo_path}" config user.name "CI Test"
+    git -C "${repo_path}" config user.email "ci@example.invalid"
+}
+
 set +e
 missing_arg_output="$(git-switch-branch 2>&1)"
 missing_arg_exit_code=$?
@@ -60,7 +68,7 @@ function test_worktree_path_detection() {
     # メインリポジトリを作成
     local main_repo="${tmpdir}/main"
     mkdir -p "${main_repo}"
-    git -C "${main_repo}" init -q
+    init_test_repo "${main_repo}"
     git -C "${main_repo}" commit --allow-empty -m "init" -q
 
     # worktreeブランチを作成・追加
@@ -92,7 +100,7 @@ function test_peco_branch_moves_to_worktree() {
 
     local main_repo="${tmpdir}/main"
     mkdir -p "${main_repo}"
-    git -C "${main_repo}" init -q
+    init_test_repo "${main_repo}"
     git -C "${main_repo}" commit --allow-empty -m "init" -q
 
     local nested_dir="${main_repo}/src"
@@ -137,7 +145,7 @@ function test_worktree_sync_skips_unsafe_entries() {
     local escaped_dest="${worktree_parent}/escaped.txt"
 
     mkdir -p "${main_repo}" "${worktree_parent}"
-    git -C "${main_repo}" init -q
+    init_test_repo "${main_repo}"
     git -C "${main_repo}" commit --allow-empty -m "init" -q
 
     mkdir -p "${main_repo}/config"
