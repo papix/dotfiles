@@ -1,7 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# gitleaks の pre-commit フック
-# ステージングされた変更に対して秘密情報のスキャンを実行
+# pre-commit フック
+# lint-shell と gitleaks を実行する
+
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# SKIP 環境変数で lint-shell/shellcheck をスキップ可能
+if [[ "${SKIP:-}" == *"lint-shell"* || "${SKIP:-}" == *"shellcheck"* ]]; then
+    echo "[lint-shell] Skipped by SKIP environment variable"
+elif [[ -x "$ROOT_DIR/bin/lint-shell" ]]; then
+    echo "[lint-shell] Running shellcheck suite..."
+    if ! "$ROOT_DIR/bin/lint-shell"; then
+        echo ""
+        echo "[ERROR] lint-shell check failed."
+        echo "Fix shellcheck findings and retry."
+        echo ""
+        echo "To bypass this check (use with caution):"
+        echo "  SKIP=lint-shell git commit -m 'message'"
+        echo "  or: git commit --no-verify"
+        exit 1
+    fi
+    echo "[lint-shell] Shellcheck suite passed."
+else
+    echo "[lint-shell] Not found in this repository. Skipping."
+fi
 
 # SKIP 環境変数で gitleaks をスキップ可能
 if [[ "${SKIP:-}" == *"gitleaks"* ]]; then

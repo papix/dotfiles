@@ -51,10 +51,10 @@ function for_local() {
     while IFS= read -r package_name; do
         [ -n "$package_name" ] || continue
         packages+=("$package_name")
-    done <<< "$packages_output"
+    done <<<"$packages_output"
 
     # Homebrew
-    if type brew > /dev/null 2>&1; then
+    if type brew >/dev/null 2>&1; then
         if [ "${#packages[@]}" -eq 0 ]; then
             log_warn "No packages configured for profile ${profile_name}. Skipping brew install."
         else
@@ -88,7 +88,7 @@ function setup_mise() {
     local mise_global_config="$mise_config_dir/config.toml"
     if [ ! -f "$mise_global_config" ]; then
         log_action "mise: Creating global config..."
-        cat > "$mise_global_config" << 'TOML'
+        cat >"$mise_global_config" <<'TOML'
 [tools]
 # node = "lts"  # 必要に応じてコメント解除
 TOML

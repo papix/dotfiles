@@ -11,14 +11,14 @@ awk '
     /function run_with_sudo\(\) \{/ {capture=1}
     capture {print}
     capture && /^}/ {exit}
-' "$ROOT_DIR/setup.sh" > "$function_body"
+' "$ROOT_DIR/setup.sh" >"$function_body"
 
 if [[ ! -s "$function_body" ]]; then
     echo "ASSERTION FAILED: failed to extract run_with_sudo from setup.sh" >&2
     exit 1
 fi
 
-cat > "$tmp_dir/test_runner.sh" <<'EOF'
+cat >"$tmp_dir/test_runner.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 

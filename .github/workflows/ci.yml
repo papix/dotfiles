@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-lint:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt zsh tmux
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install shellcheck shfmt tmux
+
+      - name: Run tests
+        run: bash test/run.sh
+
+      - name: Run shell lint
+        run: bash bin/lint-shell
+
+      - name: Check shell formatting
+        run: shfmt -d -i 4 $(git ls-files '*.sh')

@@ -28,9 +28,9 @@ can_use_osc52() {
         return 1
     fi
     case "${TERM:-}" in
-        ""|dumb|unknown)
-            return 1
-            ;;
+    "" | dumb | unknown)
+        return 1
+        ;;
     esac
     return 0
 }

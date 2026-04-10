@@ -11,11 +11,10 @@ function setup_profile_file_path() {
     os_key="$(printf '%s' "$os_name" | tr '[:upper:]' '[:lower:]')"
 
     case "$os_key" in
-        darwin|linux)
-            ;;
-        *)
-            return 1
-            ;;
+    darwin | linux) ;;
+    *)
+        return 1
+        ;;
     esac
 
     printf '%s/%s-%s.txt\n' "$SETUP_PROFILES_DIR" "$os_key" "$profile_name"
@@ -37,5 +36,5 @@ function setup_load_packages() {
         trimmed="$(printf '%s' "$line" | sed 's/#.*$//; s/^[[:space:]]*//; s/[[:space:]]*$//')"
         [[ -n "$trimmed" ]] || continue
         printf '%s\n' "$trimmed"
-    done < "$profile_file"
+    done <"$profile_file"
 }

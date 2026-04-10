@@ -213,7 +213,7 @@ function for_linux() {
     set_default_shell_zsh
 
     # Homebrew
-    if ! type brew > /dev/null 2>&1; then
+    if ! type brew >/dev/null 2>&1; then
         if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         else

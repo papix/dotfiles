@@ -30,12 +30,12 @@ function setup_print_help() {
 function setup_validate_profile() {
     local profile="$1"
     case "$profile" in
-        minimal|full)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
+    minimal | full)
+        return 0
+        ;;
+    *)
+        return 1
+        ;;
     esac
 }
 
@@ -45,47 +45,47 @@ function setup_parse_options() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --allow-homebrew-install)
-                ALLOW_HOMEBREW_INSTALL=1
-                shift
-                ;;
-            --with-hackgen)
-                WITH_HACKGEN=1
-                shift
-                ;;
-            --dry-run)
-                SETUP_DRY_RUN=1
-                shift
-                ;;
-            --doctor)
-                SETUP_DOCTOR=1
-                shift
-                ;;
-            --json)
-                SETUP_JSON=1
-                shift
-                ;;
-            --profile)
-                if [[ $# -lt 2 ]]; then
-                    echo "[ERROR] Missing value for --profile. Use minimal or full." >&2
-                    return 1
-                fi
-                SETUP_PROFILE="$2"
-                shift 2
-                ;;
-            --profile=*)
-                SETUP_PROFILE="${1#*=}"
-                shift
-                ;;
-            --help|-h)
-                setup_print_help "$script_name"
-                return 2
-                ;;
-            *)
-                echo "[ERROR] Unknown option: $1" >&2
-                echo "[INFO] Use --help for usage information" >&2
+        --allow-homebrew-install)
+            ALLOW_HOMEBREW_INSTALL=1
+            shift
+            ;;
+        --with-hackgen)
+            WITH_HACKGEN=1
+            shift
+            ;;
+        --dry-run)
+            SETUP_DRY_RUN=1
+            shift
+            ;;
+        --doctor)
+            SETUP_DOCTOR=1
+            shift
+            ;;
+        --json)
+            SETUP_JSON=1
+            shift
+            ;;
+        --profile)
+            if [[ $# -lt 2 ]]; then
+                echo "[ERROR] Missing value for --profile. Use minimal or full." >&2
                 return 1
-                ;;
+            fi
+            SETUP_PROFILE="$2"
+            shift 2
+            ;;
+        --profile=*)
+            SETUP_PROFILE="${1#*=}"
+            shift
+            ;;
+        --help | -h)
+            setup_print_help "$script_name"
+            return 2
+            ;;
+        *)
+            echo "[ERROR] Unknown option: $1" >&2
+            echo "[INFO] Use --help for usage information" >&2
+            return 1
+            ;;
         esac
     done
 

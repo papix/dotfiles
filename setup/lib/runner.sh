@@ -27,24 +27,24 @@ function setup_execute_plan() {
     fi
 
     case "$os" in
-        Darwin)
-            log_action "SETUP for Mac"
-            common
-            for_mac
-            if setup_should_run_local_packages; then
-                for_local
-            fi
-            ;;
-        Linux)
-            log_action "SETUP for Linux"
-            common
-            for_linux
-            if setup_should_run_local_packages; then
-                for_local
-            fi
-            ;;
-        *)
-            handle_error "$os is unsupported" 1
-            ;;
+    Darwin)
+        log_action "SETUP for Mac"
+        common
+        for_mac
+        if setup_should_run_local_packages; then
+            for_local
+        fi
+        ;;
+    Linux)
+        log_action "SETUP for Linux"
+        common
+        for_linux
+        if setup_should_run_local_packages; then
+            for_local
+        fi
+        ;;
+    *)
+        handle_error "$os is unsupported" 1
+        ;;
     esac
 }
