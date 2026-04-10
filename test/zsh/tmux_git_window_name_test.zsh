@@ -251,7 +251,7 @@ tmux-git-window-name
 ghq_log="$(cat "${tmux_log}")"
 assert_contains "dotfiles" "${ghq_log}" "should include ghq repository name"
 
-# 期待: ghq配下の複数repo表示でも各repoのマークを保持する
+# 期待: ghq配下の複数repo表示でもGitHub表記を統一する
 export TMUX="session:1.4b"
 export TMUX_PANE="%6"
 set_git_repo_map \
@@ -262,7 +262,7 @@ cd "${HOME}/.ghq/github.com/papix/dotfiles"
 : > "${tmux_log}"
 tmux-git-window-name
 multi_ghq_log="$(cat "${tmux_log}")"
-assert_contains "rename-window -t %6 "$(printf '\ue28e')" dotfiles/"$(printf '\uf205')" example-repo" "${multi_ghq_log}" "should keep per-repository icons when aggregating ghq repositories"
+assert_contains "rename-window -t %6 "$(printf '\uf408')" papix/dotfiles/"$(printf '\uf408')" example-owner/example-repo" "${multi_ghq_log}" "should use the generic GitHub label when aggregating ghq repositories"
 
 # 期待: TMUX_PANEが空ならフォールバックで従来形式を使う
 export TMUX="session:1.5"
@@ -331,7 +331,7 @@ assert_contains "$(printf '\ue727')" "${worktree_papix_log}" "worktree: should i
 assert_contains "dotfiles" "${worktree_papix_log}" "worktree papix: should include repo name"
 assert_not_contains "$(printf '\ue28e')" "${worktree_papix_log}" "worktree papix: should not include owner icon"
 
-# 期待: worktreeパス（example-ownerオーナー）もworktreeアイコン + repo名に統一する
+# 期待: worktreeパス（任意オーナー）もworktreeアイコン + repo名に統一する
 export TMUX="session:2.2"
 export TMUX_PANE="%21"
 set_git_repo_map "${worktree_example}::${worktree_example}"
@@ -340,9 +340,9 @@ cd "${worktree_example}"
 : > "${tmux_log}"
 tmux-git-window-name
 worktree_example_log="$(cat "${tmux_log}")"
-assert_contains "$(printf '\ue727')" "${worktree_example_log}" "worktree example-owner: should include branch icon"
-assert_contains "example-repo" "${worktree_example_log}" "worktree example-owner: should include repo name"
-assert_not_contains "$(printf '\uf205')" "${worktree_example_log}" "worktree example-owner: should not include owner icon"
+assert_contains "$(printf '\ue727')" "${worktree_example_log}" "worktree example: should include branch icon"
+assert_contains "example-repo" "${worktree_example_log}" "worktree example: should include repo name"
+assert_not_contains "example-owner/" "${worktree_example_log}" "worktree example: should not include owner name"
 
 # 期待: worktreeパス（その他オーナー）もworktreeアイコン + repo名に統一する
 export TMUX="session:2.3"

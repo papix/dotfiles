@@ -16,17 +16,7 @@ tmux_git_repo_github_label() {
     local owner="$1"
     local repo_name="$2"
 
-    case "$owner" in
-    papix)
-        printf '%s %s\n' "$(printf '\ue28e')" "$repo_name"
-        ;;
-    example-owner)
-        printf '%s %s\n' "$(printf '\uf205')" "$repo_name"
-        ;;
-    *)
-        printf '%s %s/%s\n' "$(printf '\uf408')" "$owner" "$repo_name"
-        ;;
-    esac
+    printf '%s %s/%s\n' "$(printf '\uf408')" "$owner" "$repo_name"
 }
 
 tmux_git_repo_label_from_root() {
