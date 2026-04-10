@@ -90,6 +90,8 @@ function setup_git_config() {
     chmod +x "${HOME}/.config/git/template/hooks/pre-commit"
     set_config_file "/config/git/template/hooks/pre-push" "/.config/git/template/hooks/pre-push"
     chmod +x "${HOME}/.config/git/template/hooks/pre-push"
+    set_config_file "/config/git/template/hooks/post-checkout" "/.config/git/template/hooks/post-checkout"
+    chmod +x "${HOME}/.config/git/template/hooks/post-checkout"
 
     # Husky 用の初期化スクリプト
     set_config_file "/config/husky/init.sh" "/.config/husky/init.sh"

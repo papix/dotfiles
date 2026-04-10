@@ -40,11 +40,27 @@ function git-default-branch() {
 # ブランチに切り替え（worktree対応・サブディレクトリ維持）
 # 使用法: git-switch-branch <branch-name>
 # 戻り値: 成功時0、失敗時1
-# 出力: worktree移動時は移動先パスを出力（peco-branch用）
+# 出力: worktree移動時は移動先パスを出力
 function __git_branch_worktree_path() {
     local branch="$1"
-    git for-each-ref --format=$'%(refname:short)\t%(worktreepath)' refs/heads 2>/dev/null \
-        | awk -F'\t' -v branch="${branch}" '$1 == branch {print $2}'
+    local wt_info
+    wt_info=$(git worktree list --porcelain 2>/dev/null)
+    local wt_path=""
+    local line=""
+    while IFS= read -r line; do
+        case "${line}" in
+            "worktree "*)
+                wt_path="${line#worktree }"
+                ;;
+            "branch refs/heads/${branch}")
+                echo "${wt_path}"
+                return 0
+                ;;
+            "")
+                wt_path=""
+                ;;
+        esac
+    done <<< "${wt_info}"
 }
 
 function __git_target_path_for_worktree() {
@@ -61,6 +77,16 @@ function __git_target_path_for_worktree() {
     echo "${worktree_path}"
 }
 
+function __git_branch_target_path() {
+    local branch="$1"
+    local worktree_path
+    worktree_path=$(__git_branch_worktree_path "${branch}")
+
+    if [[ -n "${worktree_path}" && -d "${worktree_path}" ]]; then
+        __git_target_path_for_worktree "${worktree_path}"
+    fi
+}
+
 function git-switch-branch() {
     local branch="${1:-}"
     if [[ -z "${branch}" ]]; then
@@ -68,15 +94,13 @@ function git-switch-branch() {
         return 1
     fi
 
-    local worktree_path
-    worktree_path=$(__git_branch_worktree_path "${branch}")
+    local target_path
+    target_path=$(__git_branch_target_path "${branch}")
 
-    if [[ -n "${worktree_path}" && -d "${worktree_path}" ]]; then
+    if [[ -n "${target_path}" ]]; then
         # 別のworktreeでチェックアウト済み → そのディレクトリに移動
         # 現在のサブディレクトリを維持する
-        local target_path
-        target_path=$(__git_target_path_for_worktree "${worktree_path}")
-        echo "${target_path}"  # peco-branch用に出力
+        echo "${target_path}"
         builtin cd -- "${target_path}"
     else
         # 通常のチェックアウト
@@ -212,24 +236,28 @@ function peco-branch() {
             BUFFER="${cmd} ${selected_branch}"
             CURSOR="${#BUFFER}"
         else
-            # git-switch-branchの出力を取得（worktree移動時はパス、通常時は空）
-            local switch_output
-            switch_output=$(git-switch-branch "${selected_branch}" 2>&1)
-            local exit_code=$?
+            local target_path
+            target_path=$(__git_branch_target_path "${selected_branch}")
 
-            if [[ ${exit_code} -eq 0 ]]; then
-                if [[ -n "${switch_output}" && -d "${switch_output}" ]]; then
-                    # worktree移動の場合
-                    BUFFER="cd ${(q)switch_output}"
-                    zle accept-line
+            if [[ -n "${target_path}" ]]; then
+                if builtin cd -- "${target_path}"; then
+                    zle reset-prompt
                 else
-                    # 通常のcheckout完了
+                    zle -M "Failed to change directory: ${target_path}"
                     zle reset-prompt
                 fi
             else
-                # 失敗時はエラーを表示
-                echo "${switch_output}" >&2
-                zle reset-prompt
+                local checkout_output
+                checkout_output=$(git checkout "${selected_branch}" 2>&1)
+                local exit_code=$?
+
+                if [[ ${exit_code} -eq 0 ]]; then
+                    zle reset-prompt
+                else
+                    # 失敗時はステータスラインにエラーを表示
+                    zle -M "${checkout_output}"
+                    zle reset-prompt
+                fi
             fi
         fi
     fi
@@ -269,6 +297,63 @@ function peco-difit() {
     fi
 }
 alias pifit='peco-difit'
+
+function __worktree_sync_entry_is_safe() {
+    local entry="$1"
+    case "$entry" in
+        ..|../*|*/..|*/../*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+# worktree-sync に記載されたファイルをメインworktreeからコピー
+function worktree-sync() {
+    inside-git-repository || return 1
+
+    local common_dir
+    common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || return 1
+    local main_worktree
+    main_worktree="$(cd "$common_dir/.." && pwd)"
+    local current_worktree
+    current_worktree="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+
+    if [[ "$main_worktree" == "$current_worktree" ]]; then
+        echo "Already in main worktree" >&2
+        return 1
+    fi
+
+    local setup_file="$main_worktree/.worktree-sync"
+    if [[ ! -f "$setup_file" ]]; then
+        echo "No .worktree-sync found in $main_worktree" >&2
+        return 1
+    fi
+
+    local copied=0
+    while IFS= read -r entry || [[ -n "$entry" ]]; do
+        [[ -z "$entry" || "$entry" == \#* ]] && continue
+        if ! __worktree_sync_entry_is_safe "$entry"; then
+            echo "Skipped unsafe path: $entry" >&2
+            continue
+        fi
+        [[ -f "$main_worktree/$entry" ]] || continue
+        if [[ ! -e "$current_worktree/$entry" ]]; then
+            local entry_dir
+            entry_dir="$(dirname "$entry")"
+            [[ "$entry_dir" != "." ]] && mkdir -p "$current_worktree/$entry_dir"
+            cp "$main_worktree/$entry" "$current_worktree/$entry"
+            echo "Copied $entry"
+            copied=$((copied + 1))
+        else
+            echo "Skipped $entry (already exists)"
+        fi
+    done < "$setup_file"
+
+    echo "$copied file(s) copied"
+}
 
 # pecoでブランチを選択して削除
 function peco-delete-branch() {

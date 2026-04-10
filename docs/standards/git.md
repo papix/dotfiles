@@ -31,15 +31,15 @@ feat: tmuxセッション自動起動機能を実装
 ## ブランチ戦略
 
 ### ブランチ名
-- `master`: プロダクションブランチ
+- `main`: プロダクションブランチ
 - `feature/<feature-name>`: 新機能開発
 - `fix/<issue-number>`: バグ修正
 - `refactor/<target>`: リファクタリング
 
 ### フロー
-1. masterから新しいブランチを作成
+1. mainから新しいブランチを作成
 2. 機能を実装
-3. masterにPRを作成
+3. mainにPRを作成
 4. レビュー後マージ
 
 ## コミット粒度

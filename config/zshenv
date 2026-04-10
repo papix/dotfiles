@@ -56,6 +56,9 @@ export DISABLE_ERROR_REPORTING=true
 export DISABLE_BUG_COMMAND=true
 export CLAUDE_ENV_FILE="${HOME}/.config/claude_env.sh"
 
+# Git worktree base directory (AI agent 用)
+export WORKTREE_BASE_DIR="${WORKTREE_BASE_DIR:-${HOME}/.worktrees}"
+
 ########################################
 # Environment
 ########################################

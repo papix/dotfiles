@@ -21,6 +21,17 @@ ls ~/.local/share/fonts/HackGen*NF*.ttf
 2. Font: `HackGenConsole NF` または `HackGen35Console NF`を選択
 3. Non-ASCII Font: 同じフォントを選択
 
+##### Solarized Darkの適用（iTerm2）
+1. Preferences → Profiles → Colors
+2. Color Presets... → Import...
+3. `config/iterm2/Solarized-Dark.itermcolors` を選択
+4. 再度 Color Presets... から `Solarized-Dark` を選択
+
+##### 文字色と背景色の同化を減らす設定
+1. Preferences → Profiles → Colors
+2. `Minimum Contrast` を有効化して、必要最小限だけスライダーを上げる
+3. その後 tmux を再読み込みして表示を確認する（`Ctrl-q r`）
+
 #### VS Code / Cursor
 `settings.json`に以下を追加：
 ```json

@@ -11,7 +11,7 @@ export TMUX_POWERLINE_SEG_GIT_STATUS_SHOW_COMMIT_STATUS="1"
 export TMUX_POWERLINE_SEG_GIT_STATUS_SHOW_BRANCH="1"
 
 # Repository symbol (GitHub repos automatically show nf-cod-github)
-# Only repositories under ~/.ghq/ will show repository names
+# ghq配下と対応済みworktree配下で repository 名を表示
 # export TMUX_POWERLINE_SEG_GIT_STATUS_REPO_SYMBOL=""
 
 # Branch symbol (automatically shows nf-pl-branch)

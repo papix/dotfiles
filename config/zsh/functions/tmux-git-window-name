@@ -1,42 +1,144 @@
 #!/usr/bin/env zsh
 # tmuxウィンドウ名をディレクトリベースで更新
 
+typeset -g TMUX_GIT_WINDOW_NAME_HELPER_PATH="${${(%):-%x}:A:h:h:h}/tmux-powerline/segments/git_repository_helper.sh"
+
+if [[ -f "$TMUX_GIT_WINDOW_NAME_HELPER_PATH" ]]; then
+    source "$TMUX_GIT_WINDOW_NAME_HELPER_PATH"
+fi
+
+function tmux_git_window_name_is_excluded_path() {
+    local target_path="$1"
+
+    [[ "$target_path" == "$HOME/.claude/plugins"* ]] && return 0
+    [[ "$target_path" == "$HOME/.claude/mcp-servers"* ]] && return 0
+
+    return 1
+}
+
+function tmux_git_window_name_repo_label_from_root() {
+    local repo_path="$1"
+    local label=""
+
+    if typeset -f tmux_git_repo_label_from_root >/dev/null 2>&1; then
+        label="$(tmux_git_repo_label_from_root "$repo_path")" || label=""
+    fi
+
+    if [[ -n "$label" ]]; then
+        print -r -- "$label"
+        return 0
+    fi
+
+    print -r -- "${repo_path##*/}"
+}
+
+function tmux_git_window_name_label_from_path() {
+    local target_path="$1"
+    local repo_path
+
+    tmux_git_window_name_is_excluded_path "$target_path" && return 1
+
+    repo_path="$(git -C "$target_path" rev-parse --show-toplevel 2>/dev/null)" || return 1
+    [[ -z "$repo_path" ]] && return 1
+
+    tmux_git_window_name_repo_label_from_root "$repo_path"
+}
+
+function tmux_git_window_name_window_target_from_pane() {
+    local pane_target="$1"
+    local window_target
+
+    [[ -n "$pane_target" ]] || return 1
+
+    window_target="$(tmux display-message -p -t "$pane_target" '#{window_id}' 2>/dev/null)" || return 1
+    [[ -n "$window_target" ]] || return 1
+
+    print -r -- "$window_target"
+}
+
+function tmux_git_window_name_collect_window_labels() {
+    local pane_target="$1"
+    local window_target
+    local list_panes_output
+    local line
+    local pane_path
+    local label
+    local -a labels
+    local -A seen_labels
+
+    if [[ -n "$pane_target" ]]; then
+        window_target="$(tmux_git_window_name_window_target_from_pane "$pane_target" 2>/dev/null)" || window_target=""
+
+        if [[ -n "$window_target" ]]; then
+            list_panes_output="$(tmux list-panes -t "$window_target" -F '#{pane_current_path}' 2>/dev/null)" || \
+                list_panes_output="$(tmux list-panes -t "$pane_target" -F '#{pane_current_path}' 2>/dev/null)" || return 1
+        else
+            list_panes_output="$(tmux list-panes -t "$pane_target" -F '#{pane_current_path}' 2>/dev/null)" || return 1
+        fi
+    else
+        list_panes_output="$(tmux list-panes -F '#{pane_current_path}' 2>/dev/null)" || return 1
+    fi
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        pane_path="$line"
+        [[ "$pane_path" == *$'\t'* ]] && pane_path="${pane_path#*$'\t'}"
+
+        label="$(tmux_git_window_name_label_from_path "$pane_path")" || continue
+        [[ -z "${seen_labels[$label]:-}" ]] || continue
+
+        labels+=("$label")
+        seen_labels[$label]=1
+    done <<< "$list_panes_output"
+
+    (( ${#labels[@]} > 0 )) || return 1
+
+    local IFS="/"
+    print -r -- "${labels[*]}"
+}
+
+function tmux_git_window_name_fallback_title() {
+    local target_path="$1"
+    local window_title="${target_path##*/}"
+    local label
+
+    label="$(tmux_git_window_name_label_from_path "$target_path")" || {
+        print -r -- "$window_title"
+        return 0
+    }
+
+    print -r -- "$label"
+}
+
+function tmux_git_window_name_refresh_window() {
+    local window_target="$1"
+    local fallback_path
+    local window_title
+
+    [[ -n "$window_target" ]] || return 1
+
+    window_title="$(tmux_git_window_name_collect_window_labels "$window_target")" || {
+        fallback_path="$(tmux display-message -p -t "$window_target" '#{pane_current_path}' 2>/dev/null)" || fallback_path="$PWD"
+        window_title="$(tmux_git_window_name_fallback_title "$fallback_path")"
+    }
+
+    tmux rename-window -t "$window_target" "$window_title"
+}
+
 function tmux-git-window-name() {
     [[ -z "$TMUX" ]] && return
 
     # プラグインディレクトリ等は除外（早期リターン）
-    [[ "$PWD" == "$HOME/.claude/plugins"* ]] && return
-    [[ "$PWD" == "$HOME/.claude/mcp-servers"* ]] && return
+    tmux_git_window_name_is_excluded_path "$PWD" && return
 
-    local window_title="${PWD##*/}"  # デフォルト: 末尾ディレクトリ名
-
-    # gitリポジトリ内の場合
-    if git rev-parse --git-dir &>/dev/null; then
-        local repo_path=$(git rev-parse --show-toplevel 2>/dev/null)
-
-        if [[ -n "$repo_path" ]]; then
-            # ghq/github.com配下の場合はオーナー別アイコン
-            if [[ "$repo_path" =~ ^$HOME/.ghq/github.com/([^/]+)/([^/]+) ]]; then
-                local owner="${match[1]}"
-                local repo="${match[2]}"
-
-                case "$owner" in
-                    "papix")
-                        window_title="$(printf '\ue28e') $repo"  # 蝶
-                        ;;
-                    "example-owner")
-                        window_title="$(printf '\uf205') $repo"  # トグル
-                        ;;
-                    *)
-                        window_title="$(printf '\uf408') $owner/$repo"  # GitHub
-                        ;;
-                esac
-            else
-                # ghq以外のgitリポジトリはルートディレクトリ名
-                window_title="${repo_path##*/}"
-            fi
-        fi
+    if [[ -n "${TMUX_PANE:-}" ]]; then
+        tmux_git_window_name_refresh_window "$TMUX_PANE"
+        return 0
     fi
+
+    local window_title
+    window_title="$(tmux_git_window_name_collect_window_labels "${TMUX_PANE:-}")" || \
+        window_title="$(tmux_git_window_name_fallback_title "$PWD")"
 
     tmux rename-window "$window_title"
 }
