@@ -29,10 +29,10 @@ jobs:
           sudo apt-get install -y gitleaks
 
       - name: Scan working tree
-        run: gitleaks dir . --redact
+        run: gitleaks detect --source . --no-git --redact
 
       - name: Scan git history
-        run: gitleaks git --redact
+        run: gitleaks detect --source . --redact
 
   test-and-lint:
     runs-on: ${{ matrix.os }}

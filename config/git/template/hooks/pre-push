@@ -11,14 +11,13 @@ scan_gitleaks() {
     local target="$2"
 
     echo "[gitleaks] Scanning for secrets in ${target}..."
-    if ! gitleaks git --log-opts="$log_opts" --verbose --redact; then
+    if ! gitleaks detect --log-opts="$log_opts" --verbose --redact; then
         echo ""
         echo "[ERROR] gitleaks detected potential secrets in pushed commits."
         echo "Please review and remove any sensitive information."
         echo ""
         echo "To bypass this check (use with caution):"
         echo "  SKIP=gitleaks git push"
-        echo "  or: git push --no-verify"
         return 1
     fi
     echo "[gitleaks] No secrets detected in ${target}."
