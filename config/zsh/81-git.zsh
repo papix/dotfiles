@@ -65,12 +65,20 @@ function __git_branch_worktree_path() {
 
 function __git_target_path_for_worktree() {
     local worktree_path="$1"
-    local repo_root
-    repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    local repo_prefix
+    repo_prefix=$(git rev-parse --show-prefix 2>/dev/null) || return 1
 
-    local rel_path="${PWD#${repo_root}}"
-    if [[ -n "${rel_path}" && -d "${worktree_path}${rel_path}" ]]; then
-        echo "${worktree_path}${rel_path}"
+    local trimmed_worktree_path="${worktree_path%/}"
+    if [[ -n "${repo_prefix}" ]]; then
+        local target_path="${trimmed_worktree_path}/${repo_prefix%/}"
+        if [[ -d "${target_path}" ]]; then
+            echo "${target_path}"
+            return 0
+        fi
+    fi
+
+    if [[ -n "${trimmed_worktree_path}" ]]; then
+        echo "${trimmed_worktree_path}"
         return 0
     fi
 
