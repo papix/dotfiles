@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+if ! command -v shellcheck >/dev/null 2>&1; then
+    echo "[ERROR] shellcheck not found."
+    echo "Install with: brew install shellcheck"
+    exit 1
+fi
+
+cd "$ROOT_DIR"
+
+is_shell_script() {
+    local file="$1"
+    local shebang
+
+    if [[ ! -f "$file" ]]; then
+        return 1
+    fi
+
+    if [[ "$file" == *.sh ]]; then
+        return 0
+    fi
+
+    shebang="$(head -n 1 "$file" 2>/dev/null || true)"
+    if printf '%s\n' "$shebang" | grep -Eq '^#![[:space:]]*/usr/bin/env[[:space:]]+(bash|sh)([[:space:]]|$)'; then
+        return 0
+    fi
+    if printf '%s\n' "$shebang" | grep -Eq '^#![[:space:]]*[^[:space:]]*/(bash|sh)([[:space:]]|$)'; then
+        return 0
+    fi
+
+    return 1
+}
+
+declare -a core_targets=()
+declare -a test_targets=()
+declare -a tmux_powerline_targets=()
+declare -a shfmt_targets=()
+
+while IFS= read -r file; do
+    if ! is_shell_script "$file"; then
+        continue
+    fi
+
+    case "$file" in
+    test/*)
+        test_targets+=("$file")
+        ;;
+    config/tmux-powerline/themes/custom.sh | config/tmux-powerline/segments/*)
+        tmux_powerline_targets+=("$file")
+        ;;
+    *)
+        core_targets+=("$file")
+        ;;
+    esac
+
+    shfmt_targets+=("$file")
+done < <(git ls-files)
+
+echo "[shellcheck] Linting core scripts..."
+if ((${#core_targets[@]} > 0)); then
+    shellcheck "${core_targets[@]}"
+fi
+
+echo "[shellcheck] Linting test scripts..."
+if ((${#test_targets[@]} > 0)); then
+    shellcheck -e SC1090,SC2016,SC2329 "${test_targets[@]}"
+fi
+
+echo "[shellcheck] Linting tmux-powerline scripts..."
+if ((${#tmux_powerline_targets[@]} > 0)); then
+    shellcheck -e SC1091,SC2034 "${tmux_powerline_targets[@]}"
+fi
+
+if command -v shfmt >/dev/null 2>&1; then
+    echo "[shfmt] Checking shell formatting..."
+    if ((${#shfmt_targets[@]} > 0)); then
+        shfmt -d -i 4 "${shfmt_targets[@]}"
+    fi
+else
+    echo "[WARN] shfmt not found. Skipping format check."
+fi
+
+echo "[shellcheck] All checks passed."

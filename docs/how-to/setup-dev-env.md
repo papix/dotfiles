@@ -75,10 +75,10 @@ bash test/run.sh
 bin/lint-shell
 ```
 
-<<<<<<< HEAD
 `bin/lint-shell` は `setup.sh`、`bin/`、`test/` の主要bashスクリプトと、tmux-powerlineセグメントを `shellcheck` で検証します。`shfmt` が利用可能な場合は、シェルスクリプトのフォーマットも確認します。
 
 `full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` も導入します。
+
 ## トラブルシューティング
 
 ### Homebrewのインストールに失敗
@@ -115,8 +115,5 @@ bash setup.sh
 
 - [Zsh設定のカスタマイズ](./customize-zsh.md)
 - [tmuxセッション管理](./manage-tmux-sessions.md)
-<<<<<<< HEAD
-=======
 - [Neovim設定の運用と切り戻し](./manage-neovim-config.md)
->>>>>>> eac74b2 (feat: neovim設定移行と関連ドキュメントを整備)
 - [Vimクリップボード設定](./configure-vim-clipboard.md)
