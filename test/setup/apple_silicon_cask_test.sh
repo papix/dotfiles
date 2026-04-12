@@ -29,24 +29,32 @@ run_for_local_scenario() {
     local mocked_machine_arch="$2"
     local mocked_arm64_capable="$3"
     local mocked_packages="git"
+    local mocked_package_file=""
+    local result=""
 
     if [[ "$#" -ge 4 ]]; then
         mocked_packages="$4"
     fi
 
-    MOCKED_OS_NAME="$mocked_os_name" \
-        MOCKED_MACHINE_ARCH="$mocked_machine_arch" \
-        MOCKED_ARM64_CAPABLE="$mocked_arm64_capable" \
-        MOCKED_PACKAGES="$mocked_packages" \
-        LOCAL_LIB="$LOCAL_LIB" \
-        bash <<'BASH' 2>&1
+    if [[ -n "$mocked_packages" ]]; then
+        mocked_package_file="$(mktemp)"
+        printf '%s\n' "$mocked_packages" >"$mocked_package_file"
+    fi
+
+    result="$(
+        MOCKED_OS_NAME="$mocked_os_name" \
+            MOCKED_MACHINE_ARCH="$mocked_machine_arch" \
+            MOCKED_ARM64_CAPABLE="$mocked_arm64_capable" \
+            MOCKED_PACKAGE_FILE="$mocked_package_file" \
+            LOCAL_LIB="$LOCAL_LIB" \
+            bash <<'BASH' 2>&1
 set -euo pipefail
 
 source "$LOCAL_LIB"
 
-setup_load_packages() {
-    if [[ -n "$MOCKED_PACKAGES" ]]; then
-        printf '%s\n' "$MOCKED_PACKAGES"
+setup_list_package_files() {
+    if [[ -n "$MOCKED_PACKAGE_FILE" ]]; then
+        printf '%s\n' "$MOCKED_PACKAGE_FILE"
     fi
 }
 
@@ -72,6 +80,9 @@ setup_mise() {
 }
 
 brew() {
+    if [[ "${1:-}" = "bundle" && "${2:-}" = "check" ]]; then
+        return 1
+    fi
     echo "BREW:$*"
 }
 
@@ -100,10 +111,17 @@ uname() {
 
 for_local
 BASH
+    )"
+
+    if [[ -n "$mocked_package_file" ]]; then
+        rm -f "$mocked_package_file"
+    fi
+
+    printf '%s\n' "$result"
 }
 
 darwin_arm_output="$(run_for_local_scenario Darwin arm64 1)"
-assert_text_contains 'BREW:install git' "$darwin_arm_output"
+assert_text_contains 'BREW:bundle --file=' "$darwin_arm_output"
 assert_text_contains 'BREW:install --cask altair-graphql-client' "$darwin_arm_output"
 
 darwin_rosetta_output="$(run_for_local_scenario Darwin x86_64 1)"
@@ -116,8 +134,8 @@ linux_output="$(run_for_local_scenario Linux x86_64 0)"
 assert_text_not_contains 'BREW:install --cask altair-graphql-client' "$linux_output"
 
 darwin_arm_empty_packages_output="$(run_for_local_scenario Darwin arm64 1 '')"
-assert_text_contains 'WARN:No packages configured for profile full. Skipping brew install.' "$darwin_arm_empty_packages_output"
+assert_text_contains 'WARN:No package files configured for profile full. Skipping brew bundle.' "$darwin_arm_empty_packages_output"
 assert_text_contains 'BREW:install --cask altair-graphql-client' "$darwin_arm_empty_packages_output"
-assert_text_not_contains 'BREW:install git' "$darwin_arm_empty_packages_output"
+assert_text_not_contains 'BREW:bundle --file=' "$darwin_arm_empty_packages_output"
 
 echo "apple_silicon_cask_test: ok"

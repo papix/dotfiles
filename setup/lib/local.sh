@@ -37,29 +37,40 @@ function install_platform_homebrew_casks() {
 }
 
 function for_local() {
-    local os_name profile_name packages_output
-    local packages=()
-    local package_name=""
+    local os_name profile_name package_files_output
+    local package_files=()
+    local package_file=""
 
     os_name=$(uname -s)
     profile_name="${SETUP_PROFILE:-full}"
-    packages_output="$(setup_load_packages "$os_name" "$profile_name")" || {
-        handle_error "Failed to load package profile: os=${os_name}, profile=${profile_name}"
+    package_files_output="$(setup_list_package_files "$os_name" "$profile_name")" || {
+        handle_error "Failed to resolve package files: os=${os_name}, profile=${profile_name}"
         return 1
     }
 
-    while IFS= read -r package_name; do
-        [ -n "$package_name" ] || continue
-        packages+=("$package_name")
-    done <<<"$packages_output"
+    while IFS= read -r package_file; do
+        [ -n "$package_file" ] || continue
+        if [[ ! -f "$package_file" ]]; then
+            handle_error "Package file not found: $package_file"
+            return 1
+        fi
+        package_files+=("$package_file")
+    done <<<"$package_files_output"
 
     # Homebrew
     if type brew >/dev/null 2>&1; then
-        if [ "${#packages[@]}" -eq 0 ]; then
-            log_warn "No packages configured for profile ${profile_name}. Skipping brew install."
+        if [ "${#package_files[@]}" -eq 0 ]; then
+            log_warn "No package files configured for profile ${profile_name}. Skipping brew bundle."
         else
-            log_action "brew install (${profile_name})"
-            brew install "${packages[@]}"
+            for package_file in "${package_files[@]}"; do
+                if brew bundle check --file="$package_file" --no-upgrade >/dev/null 2>&1; then
+                    log_info "brew bundle: already satisfied (${package_file})"
+                    continue
+                fi
+
+                log_action "brew bundle (${profile_name})"
+                brew bundle --file="$package_file" --no-upgrade
+            done
         fi
         install_platform_homebrew_casks
     else

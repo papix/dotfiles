@@ -2,10 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-DARWIN_FULL="$ROOT_DIR/setup/profiles/darwin-full.txt"
-DARWIN_MINIMAL="$ROOT_DIR/setup/profiles/darwin-minimal.txt"
-LINUX_FULL="$ROOT_DIR/setup/profiles/linux-full.txt"
-LINUX_MINIMAL="$ROOT_DIR/setup/profiles/linux-minimal.txt"
+FULL_BREWFILE="$ROOT_DIR/Brewfile"
+MINIMAL_BREWFILE="$ROOT_DIR/Brewfile.minimal"
 
 assert_contains() {
     local needle="$1"
@@ -25,9 +23,8 @@ assert_not_contains() {
     fi
 }
 
-assert_contains 'd-kuro/tap/gwq' "$DARWIN_FULL"
-assert_contains 'd-kuro/tap/gwq' "$LINUX_FULL"
-assert_not_contains 'd-kuro/tap/gwq' "$DARWIN_MINIMAL"
-assert_not_contains 'd-kuro/tap/gwq' "$LINUX_MINIMAL"
+assert_contains 'tap "d-kuro/tap"' "$FULL_BREWFILE"
+assert_contains 'brew "gwq"' "$FULL_BREWFILE"
+assert_not_contains 'brew "gwq"' "$MINIMAL_BREWFILE"
 
 echo "gwq_profile_test: ok"

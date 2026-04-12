@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Package profiles are managed under setup/profiles/*.txt
-SETUP_PROFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../profiles" && pwd)"
+# Homebrew bundles are managed with Brewfile variants at the repository root.
+SETUP_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-function setup_profile_file_path() {
+function setup_package_os_key() {
     local os_name="$1"
-    local profile_name="$2"
     local os_key
     os_key="$(printf '%s' "$os_name" | tr '[:upper:]' '[:lower:]')"
 
@@ -17,24 +16,48 @@ function setup_profile_file_path() {
         ;;
     esac
 
-    printf '%s/%s-%s.txt\n' "$SETUP_PROFILES_DIR" "$os_key" "$profile_name"
+    printf '%s\n' "$os_key"
+}
+
+function setup_package_bundle_name() {
+    local profile_name="${1:-full}"
+
+    case "$profile_name" in
+    full)
+        printf 'Brewfile\n'
+        ;;
+    minimal)
+        printf 'Brewfile.minimal\n'
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+}
+
+function setup_list_package_files() {
+    local os_name="$1"
+    local profile_name="${2:-full}"
+    local os_key bundle_name
+
+    os_key="$(setup_package_os_key "$os_name")" || return 1
+    bundle_name="$(setup_package_bundle_name "$profile_name")" || return 1
+
+    printf '%s/%s\n' "$SETUP_REPO_ROOT" "$bundle_name"
+    printf '%s/%s.%s\n' "$SETUP_REPO_ROOT" "$bundle_name" "$os_key"
 }
 
 function setup_load_packages() {
     local os_name="$1"
     local profile_name="${2:-full}"
-    local profile_file
-    profile_file="$(setup_profile_file_path "$os_name" "$profile_name")" || return 1
+    local package_file=""
 
-    if [[ ! -f "$profile_file" ]]; then
-        echo "[ERROR] package profile file not found: $profile_file" >&2
-        return 1
-    fi
+    while IFS= read -r package_file; do
+        if [[ ! -f "$package_file" ]]; then
+            echo "[ERROR] package file not found: $package_file" >&2
+            return 1
+        fi
 
-    local line trimmed
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        trimmed="$(printf '%s' "$line" | sed 's/#.*$//; s/^[[:space:]]*//; s/[[:space:]]*$//')"
-        [[ -n "$trimmed" ]] || continue
-        printf '%s\n' "$trimmed"
-    done <"$profile_file"
+        sed -nE 's/^[[:space:]]*(brew|cask|tap)[[:space:]]+"([^"]+)".*$/\2/p' "$package_file"
+    done < <(setup_list_package_files "$os_name" "$profile_name")
 }

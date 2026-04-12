@@ -33,10 +33,7 @@ assert_text_contains 'Dry-run mode enabled' "$minimal_output"
 assert_text_contains 'Profile: minimal' "$minimal_output"
 assert_text_contains 'Would run: common setup' "$minimal_output"
 assert_text_contains 'Would run: platform setup' "$minimal_output"
-if printf '%s\n' "$minimal_output" | grep -F -- 'Would run: local package setup' >/dev/null 2>&1; then
-    echo "ASSERTION FAILED: minimal profile should not include local package setup in dry-run" >&2
-    exit 1
-fi
+assert_text_contains 'Would run: local package setup' "$minimal_output"
 
 full_output="$(bash "$SETUP_SH" --dry-run --profile=full)"
 assert_text_contains 'Profile: full' "$full_output"
