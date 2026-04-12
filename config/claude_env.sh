@@ -82,11 +82,6 @@ fi
 # dotfiles 管理の実行ファイルを最優先にする
 dotfiles_prepend_path "$HOME/.local/bin"
 
-# Git worktree base directory
-if [ -z "$WORKTREE_BASE_DIR" ]; then
-    export WORKTREE_BASE_DIR="$HOME/.worktrees"
-fi
-
 dotfiles_npm_token_cache_path() {
     printf '%s\n' "${XDG_CACHE_HOME}/dotfiles/npm-token"
 }

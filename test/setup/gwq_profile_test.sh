@@ -24,7 +24,7 @@ assert_not_contains() {
 }
 
 assert_contains 'tap "d-kuro/tap"' "$FULL_BREWFILE"
-assert_contains 'brew "gwq"' "$FULL_BREWFILE"
+assert_not_contains 'brew "gwq"' "$FULL_BREWFILE"
 assert_not_contains 'brew "gwq"' "$MINIMAL_BREWFILE"
 
 echo "gwq_profile_test: ok"

@@ -25,5 +25,6 @@ assert_not_contains_line "/config"
 assert_not_contains_line "/hooks"
 assert_not_contains_line "/objects"
 assert_not_contains_line "/refs"
+assert_not_contains_line ".worktree-sync"
 
 echo "gitignore_global_safety_test: ok"

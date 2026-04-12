@@ -5,10 +5,10 @@ ROOT_DIR="${0:A:h:h:h}"
 INIT_FILE="$ROOT_DIR/config/zsh/00-init.zsh"
 GWQ_FILE="$ROOT_DIR/config/zsh/83-gwq.zsh"
 
-assert_file_exists() {
+assert_file_missing() {
     local path="$1"
-    if [[ ! -f "$path" ]]; then
-        echo "ASSERTION FAILED: expected file $path" >&2
+    if [[ -e "$path" ]]; then
+        echo "ASSERTION FAILED: expected path to be absent: $path" >&2
         return 1
     fi
 }
@@ -22,10 +22,11 @@ assert_contains() {
     fi
 }
 
-assert_contains 'tmux peco ag gwq' "$INIT_FILE"
-assert_file_exists "$GWQ_FILE"
-assert_contains '# 依存: 40-completion.zsh (compinitのため)' "$GWQ_FILE"
-assert_contains 'if [[ -n "$COMMAND_CACHE[gwq]" ]]; then' "$GWQ_FILE"
-assert_contains 'source <(gwq completion zsh)' "$GWQ_FILE"
+assert_contains 'tmux peco ag gh op' "$INIT_FILE"
+if grep -Fq -- 'gwq' "$INIT_FILE"; then
+    echo "ASSERTION FAILED: expected gwq to be removed from $INIT_FILE" >&2
+    exit 1
+fi
+assert_file_missing "$GWQ_FILE"
 
 echo "gwq_integration_test: ok"

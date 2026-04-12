@@ -1,6 +1,0 @@
-[worktree]
-basedir = "~/.worktrees"
-auto_mkdir = true
-
-[cd]
-launch_shell = false
