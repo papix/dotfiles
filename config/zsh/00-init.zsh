@@ -30,7 +30,7 @@ local commands_to_check=(
     # ドキュメントと表示
     cpandoc tldr colordiff
     # バージョン管理と開発
-    tmux peco ag gwq gh
+    tmux peco ag gwq gh op
     # エディタ
     nvim
 )

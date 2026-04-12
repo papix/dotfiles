@@ -14,7 +14,7 @@ assert_contains() {
 }
 
 # 期待: Neovimはinit.luaを配置する
-assert_contains 'set_config_file "/config/nvim/init.lua" "/.config/nvim/init.lua"' "$COMMON_LIB"
-assert_contains 'set_config_file "/config/nvim/lua" "/.config/nvim/lua"' "$COMMON_LIB"
+assert_contains 'set_config_file_target "/config/nvim/init.lua" "${config_home}/nvim/init.lua"' "$COMMON_LIB"
+assert_contains 'set_config_file_target "/config/nvim/lua" "${config_home}/nvim/lua"' "$COMMON_LIB"
 
 echo "neovim_init_lua_link_test: ok"
