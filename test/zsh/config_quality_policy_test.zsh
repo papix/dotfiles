@@ -45,12 +45,15 @@ assert_not_contains 'if [[ -n "$COMMAND_CACHE[tree]" ]]; then' "$ALIASES_FILE"
 assert_not_contains "alias sed='gsed'" "$ALIASES_FILE"
 assert_contains "alias sed='gsed'" "$DARWIN_FILE"
 
-# 期待: copy-to-clipboard の一時変数は local 宣言する
-assert_contains 'local external payload b64_payload' "$FUNCTIONS_FILE"
+# 期待: copy-to-clipboard の一時変数は local 宣言し、stdin はストリームで処理する
+assert_contains 'local external b64_payload' "$FUNCTIONS_FILE"
+assert_contains "b64_payload=\$(base64 | tr -d '\\n')" "$FUNCTIONS_FILE"
 
 # 期待: no_global_rcs は zshenv 側で有効にする
 assert_not_contains 'setopt no_global_rcs' "$OPTIONS_FILE"
 assert_contains 'setopt no_global_rcs' "$ZSHENV_FILE"
+assert_contains 'export HISTFILE="${XDG_STATE_HOME}/zsh/history"' "$ZSHENV_FILE"
+assert_contains 'export DOTFILES_1PASSWORD_VAULT="${DOTFILES_1PASSWORD_VAULT:-dotfiles}"' "$ZSHENV_FILE"
 
 # 期待: pero は EDITOR を配列化して実行する
 assert_contains 'editor_cmd=(${(z)EDITOR})' "$PECO_FILE"

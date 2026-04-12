@@ -4,7 +4,9 @@
 ########################################
 
 # Ctrl+Sでターミナルがフリーズするのを防ぐ
-stty stop undef
+if [[ -t 0 ]]; then
+    stty stop undef
+fi
 
 # pecoで履歴を検索
 function peco-history() {

@@ -31,7 +31,7 @@ function epoch() {
 
 # OSC52を使用したクリップボードコピー
 function copy-to-clipboard() {
-    local external payload b64_payload
+    local external b64_payload
     external=$(whence -p copy-to-clipboard 2>/dev/null || true)
     if [[ -n "$external" ]]; then
         if [[ $# -eq 0 ]]; then
@@ -43,25 +43,33 @@ function copy-to-clipboard() {
     fi
 
     if [[ $# -eq 0 ]]; then
-        payload=$(cat -)
+        # stdin は変数に取り込まず、そのまま base64 に流して末尾改行を保持する
+        case $(uname) in
+            Darwin)
+                # macOSではオプションなし
+                b64_payload=$(base64 | tr -d '\n')
+                ;;
+            *)
+                # Linuxでは-w0オプションで改行なし
+                b64_payload=$(base64 -w0)
+                ;;
+        esac
     else
-        payload=$(echo -n "$1")
+        # macOSとLinuxでbase64コマンドのオプションが異なる
+        case $(uname) in
+            Darwin)
+                # macOSではオプションなし
+                b64_payload=$(printf '%s' "$1" | base64 | tr -d '\n')
+                ;;
+            *)
+                # Linuxでは-w0オプションで改行なし
+                b64_payload=$(printf '%s' "$1" | base64 -w0)
+                ;;
+        esac
     fi
 
-    # macOSとLinuxでbase64コマンドのオプションが異なる
-    case $(uname) in
-        Darwin)
-            # macOSではオプションなし
-            b64_payload=$(printf "%s" "$payload" | base64)
-            ;;
-        *)
-            # Linuxでは-w0オプションで改行なし
-            b64_payload=$(printf "%s" "$payload" | base64 -w0)
-            ;;
-    esac
-
     # OSC52
-    if [[ -n "$TMUX" ]]; then
+    if [[ -n "${TMUX:-}" ]]; then
         printf '\033Ptmux;\033\033]52;c;%s\033\033\\\033\\' "$b64_payload"
     else
         printf "\e]52;c;%s\a" "$b64_payload"

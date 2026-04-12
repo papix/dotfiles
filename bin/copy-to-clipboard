@@ -3,20 +3,6 @@ set -euo pipefail
 # クリップボードコピースクリプト（OSC52優先 + フォールバック）
 # リモート環境を優先し、必要に応じてローカル手段にフォールバックする
 
-read_input() {
-    if [[ $# -gt 0 ]]; then
-        printf '%s' "$1"
-        return 0
-    fi
-
-    if [[ -t 0 ]]; then
-        printf ''
-        return 0
-    fi
-
-    cat
-}
-
 can_use_osc52() {
     if [[ -n "${DISABLE_OSC52:-}" ]]; then
         return 1
@@ -35,12 +21,8 @@ can_use_osc52() {
     return 0
 }
 
-osc52_copy() {
-    local input="$1"
-    can_use_osc52 || return 1
-
-    local encoded
-    encoded=$(printf '%s' "$input" | base64 | tr -d '\n')
+print_osc52_sequence() {
+    local encoded="$1"
 
     # tmux環境ではpassthroughシーケンスでラップ
     if [[ -n "${TMUX:-}" ]]; then
@@ -48,10 +30,28 @@ osc52_copy() {
     else
         printf '%b' "\033]52;c;${encoded}\033\\"
     fi
+}
+
+osc52_copy_text() {
+    local input="$1"
+    can_use_osc52 || return 1
+
+    local encoded
+    encoded=$(printf '%s' "$input" | base64 | tr -d '\n')
+    print_osc52_sequence "$encoded"
     return 0
 }
 
-copy_with_fallback() {
+osc52_copy_stream() {
+    can_use_osc52 || return 1
+
+    local encoded
+    encoded=$(base64 | tr -d '\n')
+    print_osc52_sequence "$encoded"
+    return 0
+}
+
+copy_with_fallback_text() {
     local input="$1"
 
     # macOS
@@ -75,21 +75,55 @@ copy_with_fallback() {
     return 1
 }
 
+copy_with_fallback_stream() {
+    # macOS
+    if command -v pbcopy >/dev/null 2>&1; then
+        pbcopy
+        return 0
+    fi
+
+    # Linux X11 (xclip)
+    if command -v xclip >/dev/null 2>&1 && [[ -n "${DISPLAY:-}" ]]; then
+        xclip -selection clipboard
+        return 0
+    fi
+
+    # Linux Wayland (wl-copy)
+    if command -v wl-copy >/dev/null 2>&1 && [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        wl-copy
+        return 0
+    fi
+
+    return 1
+}
+
 main() {
-    local input
     if [[ $# -gt 0 ]]; then
-        input="$(read_input "$1")"
+        # 引数経路は従来どおり文字列として扱う
+        if osc52_copy_text "$1"; then
+            return 0
+        fi
+
+        if copy_with_fallback_text "$1"; then
+            return 0
+        fi
+    elif [[ -t 0 ]]; then
+        if osc52_copy_text ""; then
+            return 0
+        fi
+
+        if copy_with_fallback_text ""; then
+            return 0
+        fi
     else
-        input="$(read_input)"
-    fi
+        # stdin は変数に取り込まず、そのまま転送して末尾改行を保持する
+        if osc52_copy_stream; then
+            return 0
+        fi
 
-    # OSC52を優先し、失敗時はローカル手段にフォールバック
-    if osc52_copy "$input"; then
-        return 0
-    fi
-
-    if copy_with_fallback "$input"; then
-        return 0
+        if copy_with_fallback_stream; then
+            return 0
+        fi
     fi
 
     echo "[ERROR] Clipboard copy failed. No supported method available." >&2

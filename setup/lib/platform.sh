@@ -150,7 +150,7 @@ function install_clipboard_tools_linux() {
 # HackGen fontインストール関数
 function install_hackgen_font() {
     local font_dir="$1"
-    local font_update_cmd="$2"
+    local refresh_font_cache="${2:-0}"
 
     if ! ls "${font_dir}"/HackGen*.ttf >/dev/null 2>&1; then
         log_action "HackGen Font: Installing HackGen Nerd Font..."
@@ -159,47 +159,50 @@ function install_hackgen_font() {
         mkdir -p "${font_dir}"
 
         # Create temporary directory
-        TEMP_DIR=$(mktemp -d) || {
+        local temp_dir=""
+        temp_dir=$(mktemp -d) || {
             handle_error "Failed to create temporary directory"
             return 1
         }
-        cd "$TEMP_DIR" || {
-            handle_error "Failed to change to temporary directory: $TEMP_DIR"
-            return 1
-        }
+        if ! (
+            cd "$temp_dir" || {
+                handle_error "Failed to change to temporary directory: $temp_dir"
+                exit 1
+            }
 
-        # Download pinned release
-        if [ "$HACKGEN_NF_SHA256" = "REPLACE_WITH_SHA256" ] || [ -z "$HACKGEN_NF_SHA256" ]; then
-            handle_error "HACKGEN_NF_SHA256 is not set. Update setup.sh with the pinned checksum."
+            # Download pinned release
+            if [ "$HACKGEN_NF_SHA256" = "REPLACE_WITH_SHA256" ] || [ -z "$HACKGEN_NF_SHA256" ]; then
+                handle_error "HACKGEN_NF_SHA256 is not set. Update setup.sh with the pinned checksum."
+                exit 1
+            fi
+            log_action "HackGen Font: Downloading v${HACKGEN_VERSION}..."
+            local release_base="https://github.com/yuru7/HackGen/releases/download/v${HACKGEN_VERSION}"
+            local zip_name="HackGen_NF_v${HACKGEN_VERSION}.zip"
+
+            curl -fL --proto '=https' --tlsv1.2 -o "$zip_name" "${release_base}/${zip_name}"
+            if ! verify_sha256 "$zip_name" "$HACKGEN_NF_SHA256"; then
+                handle_error "SHA256 verification failed for ${zip_name}"
+                exit 1
+            fi
+
+            # Extract and install
+            log_action "HackGen Font: Installing fonts..."
+            unzip -q "$zip_name"
+            cp "HackGen_NF_v${HACKGEN_VERSION}"/*.ttf "${font_dir}/"
+        ); then
+            rm -rf "$temp_dir" || {
+                log_warn "Failed to remove temporary directory: $temp_dir"
+            }
             return 1
         fi
-        log_action "HackGen Font: Downloading v${HACKGEN_VERSION}..."
-        local release_base="https://github.com/yuru7/HackGen/releases/download/v${HACKGEN_VERSION}"
-        local zip_name="HackGen_NF_v${HACKGEN_VERSION}.zip"
 
-        curl -fL --proto '=https' --tlsv1.2 -o "$zip_name" "${release_base}/${zip_name}"
-        if ! verify_sha256 "$zip_name" "$HACKGEN_NF_SHA256"; then
-            handle_error "SHA256 verification failed for ${zip_name}"
-            return 1
-        fi
-
-        # Extract and install
-        log_action "HackGen Font: Installing fonts..."
-        unzip -q "$zip_name"
-        cp "HackGen_NF_v${HACKGEN_VERSION}"/*.ttf "${font_dir}/"
-
-        # Update font cache if command provided
-        if [ -n "$font_update_cmd" ]; then
-            eval "$font_update_cmd"
-        fi
-
-        # Cleanup
-        cd - >/dev/null || {
-            log_warn "Failed to return to previous directory"
+        rm -rf "$temp_dir" || {
+            log_warn "Failed to remove temporary directory: $temp_dir"
         }
-        rm -rf "$TEMP_DIR" || {
-            log_warn "Failed to remove temporary directory: $TEMP_DIR"
-        }
+
+        if [[ "$refresh_font_cache" = "1" ]] && command -v fc-cache >/dev/null 2>&1; then
+            fc-cache -fv "$font_dir"
+        fi
 
         log_info "HackGen Font: Installation completed"
         log_info "HackGen Font: Please set HackGen font in your terminal preferences"
@@ -241,11 +244,11 @@ function for_linux() {
     # Setup HackGen font if not installed
     if [ "$WITH_HACKGEN" = "1" ]; then
         if command -v curl >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1; then
-            local font_update_cmd=""
+            local refresh_font_cache=0
             if command -v fc-cache >/dev/null 2>&1; then
-                font_update_cmd="fc-cache -fv $HOME/.local/share/fonts/"
+                refresh_font_cache=1
             fi
-            install_hackgen_font "$HOME/.local/share/fonts" "$font_update_cmd"
+            install_hackgen_font "$HOME/.local/share/fonts" "$refresh_font_cache"
         else
             log_warn "curl or unzip not found. Skipping HackGen font installation."
         fi
@@ -266,7 +269,7 @@ function for_mac() {
 
     # Setup HackGen font if not installed
     if [ "$WITH_HACKGEN" = "1" ]; then
-        install_hackgen_font "$HOME/Library/Fonts" ""
+        install_hackgen_font "$HOME/Library/Fonts" "0"
     else
         log_skip "HackGen font installation skipped. Use --with-hackgen to enable."
     fi

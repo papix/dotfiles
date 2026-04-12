@@ -6,22 +6,25 @@
 
 # tmux内での追加設定
 if [[ -n "${TMUX:-}" ]]; then
+    local config_home
+    config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
+
     # 新しい pane / window でも同じ PATH を引き継げるよう tmux サーバーに同期する
     command tmux set-environment -g PATH "$PATH" >/dev/null 2>&1 || true
 
     # tmux-git-window-name関数の読み込み
-    if [[ -f "${HOME}/.config/zsh/functions/tmux-git-window-name" ]]; then
-        source "${HOME}/.config/zsh/functions/tmux-git-window-name"
+    if [[ -f "${config_home}/zsh/functions/tmux-git-window-name" ]]; then
+        source "${config_home}/zsh/functions/tmux-git-window-name"
     fi
 
-    if (( $+functions[tmux-git-window-name] )); then
+    if typeset -f tmux-git-window-name >/dev/null 2>&1; then
         # ディレクトリ変更時にwindow名を更新
         autoload -Uz add-zsh-hook
         add-zsh-hook chpwd tmux-git-window-name
-        
+
         # プロンプト表示前にもwindow名を更新
         add-zsh-hook precmd tmux-git-window-name
-        
+
         # 初回読み込み時に実行
         tmux-git-window-name
     fi
@@ -76,7 +79,7 @@ function sanitize_tmux_session_name() {
     if [[ -z "$name" ]]; then
         name="default"
     fi
-    if (( ${#name} > 80 )); then
+    if ((${#name} > 80)); then
         name="${name[1,80]}"
     fi
 
@@ -143,7 +146,7 @@ fi
 # 引数なしで実行時、既存セッションがあれば自動attach
 # 参考: https://qiita.com/kawaz/items/0cd28a955205c79ec7e3
 # 条件: インタラクティブシェル && tmux外 && tmuxコマンド存在
-if [[ -n "${PS1:-}" ]] && [[ -z "${TMUX:-}" ]] && type tmux > /dev/null 2>&1; then
+if [[ -n "${PS1:-}" ]] && [[ -z "${TMUX:-}" ]] && type tmux >/dev/null 2>&1; then
     function tmux() {
         if [[ $# == 0 ]] && command tmux has-session 2>/dev/null; then
             command tmux attach-session
@@ -216,28 +219,28 @@ function work-remote-relative-path() {
     local normalized="${remote_url%.git}"
 
     case "$normalized" in
-        git@*:*/*)
-            local host_and_path="${normalized#git@}"
-            local host="${host_and_path%%:*}"
-            local path="${host_and_path#*:}"
-            echo "${host}/${path}"
-            return 0
-            ;;
-        ssh://git@*/*)
-            local without_scheme="${normalized#ssh://}"
-            local host_and_path="${without_scheme#git@}"
-            local host="${host_and_path%%/*}"
-            local path="${host_and_path#*/}"
-            echo "${host}/${path}"
-            return 0
-            ;;
-        http://*/*/*|https://*/*/*)
-            local without_scheme="${normalized#*://}"
-            local host="${without_scheme%%/*}"
-            local path="${without_scheme#*/}"
-            echo "${host}/${path}"
-            return 0
-            ;;
+    git@*:*/*)
+        local host_and_path="${normalized#git@}"
+        local host="${host_and_path%%:*}"
+        local path="${host_and_path#*:}"
+        echo "${host}/${path}"
+        return 0
+        ;;
+    ssh://git@*/*)
+        local without_scheme="${normalized#ssh://}"
+        local host_and_path="${without_scheme#git@}"
+        local host="${host_and_path%%/*}"
+        local path="${host_and_path#*/}"
+        echo "${host}/${path}"
+        return 0
+        ;;
+    http://*/*/* | https://*/*/*)
+        local without_scheme="${normalized#*://}"
+        local host="${without_scheme%%/*}"
+        local path="${without_scheme#*/}"
+        echo "${host}/${path}"
+        return 0
+        ;;
     esac
 
     return 1
@@ -340,18 +343,18 @@ function work-prune() {
     fi
 
     case "${1:-}" in
-        stale)
-            shift
-            gwq prune "$@"
-            ;;
-        expired)
-            shift
-            gwq prune --expired "$@"
-            ;;
-        *)
-            gwq prune >/dev/null 2>&1 || return 1
-            gwq remove "$@"
-            ;;
+    stale)
+        shift
+        gwq prune "$@"
+        ;;
+    expired)
+        shift
+        gwq prune --expired "$@"
+        ;;
+    *)
+        gwq prune >/dev/null 2>&1 || return 1
+        gwq remove "$@"
+        ;;
     esac
 }
 
@@ -366,29 +369,29 @@ function work-help() {
 
 function work() {
     case "${1:-}" in
-        "")
-            local selected_repo=""
-            selected_repo="$(work-select-repo)" || return 1
-            if [[ -z "$selected_repo" ]]; then
-                return 0
-            fi
-            work-open-window "$selected_repo"
-            ;;
-        new)
-            shift
-            work-new "$@"
-            ;;
-        prune)
-            shift
-            work-prune "$@"
-            ;;
-        help|-h|--help)
-            work-help
-            ;;
-        *)
-            echo "Error: unknown subcommand: $1" >&2
-            work-help >&2
-            return 1
-            ;;
+    "")
+        local selected_repo=""
+        selected_repo="$(work-select-repo)" || return 1
+        if [[ -z "$selected_repo" ]]; then
+            return 0
+        fi
+        work-open-window "$selected_repo"
+        ;;
+    new)
+        shift
+        work-new "$@"
+        ;;
+    prune)
+        shift
+        work-prune "$@"
+        ;;
+    help | -h | --help)
+        work-help
+        ;;
+    *)
+        echo "Error: unknown subcommand: $1" >&2
+        work-help >&2
+        return 1
+        ;;
     esac
 }

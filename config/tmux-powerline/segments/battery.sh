@@ -35,7 +35,7 @@ run_segment() {
 
     # Check cache
     if [ -f "$CACHE_FILE" ] && [ ! -L "$CACHE_FILE" ]; then
-        cache_age=$(($(date +%s) - $(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)))
+        cache_age=$(($(date +%s) - $(stat -c %Y "$CACHE_FILE" 2>/dev/null || stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)))
         if [ $cache_age -lt $CACHE_DURATION ]; then
             cat "$CACHE_FILE"
             return 0

@@ -26,13 +26,15 @@ assert_executable() {
 }
 
 # 期待: pane close時にwindow名を再計算するhookがある
-assert_contains "set-hook -g after-kill-pane 'run-shell \"~/.config/zsh/functions/tmux-git-window-name-refresh \\\"#{window_id}\\\"\"'" "$TMUX_CONF"
-assert_contains "set-hook -g pane-exited 'run-shell \"~/.config/zsh/functions/tmux-git-window-name-refresh \\\"#{window_id}\\\"\"'" "$TMUX_CONF"
+assert_contains "set-hook -g after-kill-pane 'run-shell \"\${XDG_CONFIG_HOME:-\$HOME/.config}/zsh/functions/tmux-git-window-name-refresh \\\"#{window_id}\\\"\"'" "$TMUX_CONF"
+assert_contains "set-hook -g pane-exited 'run-shell \"\${XDG_CONFIG_HOME:-\$HOME/.config}/zsh/functions/tmux-git-window-name-refresh \\\"#{window_id}\\\"\"'" "$TMUX_CONF"
 
 # 期待: hook先スクリプトが存在し、refresh関数を呼ぶ
 assert_executable "$REFRESH_SCRIPT"
-assert_contains 'source "${HOME}/.config/zsh/functions/tmux-git-window-name"' "$REFRESH_SCRIPT"
+assert_contains 'config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"' "$REFRESH_SCRIPT"
+assert_contains 'source "${config_home}/zsh/functions/tmux-git-window-name"' "$REFRESH_SCRIPT"
 assert_contains 'tmux_git_window_name_refresh_window "$window_target"' "$REFRESH_SCRIPT"
+assert_contains 'if typeset -f tmux-git-window-name >/dev/null 2>&1; then' "$ROOT_DIR/config/zsh/82-tmux.zsh"
 
 # 期待: 関数本体にwindow指定更新用の関数がある
 assert_contains "function tmux_git_window_name_refresh_window()" "$WINDOW_NAME_FUNC"
