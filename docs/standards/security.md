@@ -8,9 +8,18 @@
 
 ## 機密情報の管理
 
-### 環境変数
+### 1Password（推奨）
+```text
+Vault: dotfiles
+Item: shared-env
+Field: NPM_TOKEN
+```
+
+`op` が利用可能でも、シェル起動や Claude Code 実行のたびに認証プロンプトを出さないよう、自動読込は `DOTFILES_1PASSWORD_AUTOLOAD=1` のときだけ有効です。取得できた値は `XDG_CACHE_HOME` 配下に安全な権限でキャッシュします。
+
+### ローカル環境変数（最終手段）
 ```bash
-# ~/.zshrc.local に記載（gitignore対象）
+# ~/.zshenv.local / ~/.zshrc.local に記載（gitignore対象）
 export API_KEY="your-secret-key"
 export DATABASE_PASSWORD="your-password"
 ```
@@ -19,6 +28,7 @@ export DATABASE_PASSWORD="your-password"
 ```bash
 # 機密ファイルは600に設定
 chmod 600 ~/.ssh/id_rsa
+chmod 600 ~/.zshenv.local
 chmod 600 ~/.zshrc.local
 ```
 

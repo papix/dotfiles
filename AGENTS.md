@@ -7,7 +7,9 @@
 - `setup.sh`: Entry point for initial setup. Follow the steps in `README.md`.
 
 ## Build, Test, and Development Commands
-- `bash setup.sh`: Check required tools and run initial setup.
+- `bash setup.sh --doctor`: Check package files and required tools.
+- `bash setup.sh --dry-run`: Preview the setup plan.
+- `bash setup.sh`: Run initial setup.
 - `export DISABLE_AUTO_TMUX=1`: Disable tmux auto-start (when needed).
 - `brew update && brew upgrade`: Update dependency tools (optional maintenance).
 
@@ -18,14 +20,16 @@
 - Config files: YAML/TOML use 2 spaces, JSON uses 2 spaces with no trailing commas.
 
 ## Testing Guidelines
-- Currently no automated tests. After changes, manually verify affected areas (e.g., `zsh` startup, `tmux` startup, key aliases).
+- Run `bash test/run.sh` before completing changes.
+- After shell/config changes, manually verify affected areas (e.g., `zsh` startup, `tmux` startup, key aliases).
 - If adding tests, place them in `test/` or similar with a single entry point.
 
 ## Commit & Pull Request Guidelines
 - Commits in Japanese using Conventional Commits format (e.g., `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
-- Branch names: `master`, `feature/*`, `fix/*`, `refactor/*`.
-- PRs target `master`. Include: change description, rationale, manual verification results, and impact scope (especially `setup.sh` or `config/`).
+- Branch names: `main`, `feature/*`, `fix/*`, `refactor/*`.
+- PRs target `main`. Include: change description, rationale, manual verification results, and impact scope (especially `setup.sh` or `config/`).
 
 ## Security & Configuration Tips
-- Store sensitive information in `~/.zshrc.local` or `*.local` files, never commit to Git.
+- Store secrets in 1Password when possible. The default lookup is `op://dotfiles/shared-env/NPM_TOKEN`, and shell-side autoload is opt-in via `DOTFILES_1PASSWORD_AUTOLOAD=1`.
+- Keep `~/.zshrc.local` / `~/.zshenv.local` for machine-specific non-secret settings and last-resort local overrides.
 - Set permissions to `600` for important files, never output secrets in logs.

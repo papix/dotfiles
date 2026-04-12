@@ -22,14 +22,28 @@ git clone git@github.com:papix/dotfiles.git ~/dotfiles
 
 ```bash
 cd ~/.ghq/github.com/papix/dotfiles
+bash setup.sh --doctor
+bash setup.sh --dry-run
 bash setup.sh
 ```
 
 このスクリプトは以下を実行します：
 - Homebrewのインストール（macOS/Linux）
-- 必要なパッケージのインストール
+- `Brewfile` に定義された必要パッケージのインストール
 - 設定ファイルのシンボリックリンク作成
 - フォントのインストール
+
+### 2.5. 1Password の secrets を用意する（推奨）
+
+dotfiles は以下を既定値として `NPM_TOKEN` を参照できます。
+
+```text
+Vault: dotfiles
+Item: shared-env
+Field: NPM_TOKEN
+```
+
+`config/bash_env.sh` / `config/claude_env.sh` で 1Password CLI (`op`) の自動読込を使う場合は、`DOTFILES_1PASSWORD_AUTOLOAD=1` を設定してください。Linux で CLI とデスクトップ連携を使う場合は、1Password for Linux と PolKit agent を別途用意してください。`op` が使えない、または自動読込を無効にしている場合は既存キャッシュとローカル環境変数へフォールバックします。
 
 ### 3. シェルの再起動
 
@@ -77,7 +91,7 @@ bin/lint-shell
 
 `bin/lint-shell` は `setup.sh`、`bin/`、`test/` の主要bashスクリプトと、tmux-powerlineセグメントを `shellcheck` で検証します。`shfmt` が利用可能な場合は、シェルスクリプトのフォーマットも確認します。
 
-`full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` も導入します。
+`full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` と `1password-cli` も導入します。
 
 ## トラブルシューティング
 

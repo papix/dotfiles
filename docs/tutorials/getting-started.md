@@ -39,6 +39,10 @@ cd ~/.ghq/github.com/papix/dotfiles
 ## ステップ3: セットアップスクリプトを実行
 
 ```bash
+# 診断と dry-run を確認
+bash setup.sh --doctor
+bash setup.sh --dry-run
+
 # セットアップを開始
 bash setup.sh
 ```
@@ -46,9 +50,19 @@ bash setup.sh
 スクリプトは以下を自動的に行います：
 - ✅ OSを検出（macOS/Linux）
 - ✅ Homebrewをインストール（未インストールの場合）
-- ✅ 必要なツールをインストール
+- ✅ `Brewfile` に定義されたツールをインストール
 - ✅ 設定ファイルのシンボリックリンクを作成
 - ✅ フォントをインストール
+
+必要なら、事前に 1Password に以下の secrets を用意してください。
+
+```text
+Vault: dotfiles
+Item: shared-env
+Field: NPM_TOKEN
+```
+
+自動読込を有効にしたい場合は、`~/.zshenv.local` などで `export DOTFILES_1PASSWORD_AUTOLOAD=1` を設定してください。
 
 ## ステップ4: 新しいシェルセッションを開始
 

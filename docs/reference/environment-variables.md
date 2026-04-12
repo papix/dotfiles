@@ -52,6 +52,18 @@
 - **説明**: ファイルに保存する履歴サイズ
 - **設定場所**: `config/zshenv`
 
+#### `XDG_CACHE_HOME`
+- **型**: string
+- **デフォルト**: `$HOME/.cache`
+- **説明**: キャッシュのベースディレクトリ。`dotfiles/npm-token` などを保存
+- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+
+#### `XDG_STATE_HOME`
+- **型**: string
+- **デフォルト**: `$HOME/.local/state`
+- **説明**: 状態ファイルのベースディレクトリ。zsh 履歴は `$XDG_STATE_HOME/zsh/history`
+- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+
 ### 開発ツール
 
 #### `GOPATH`
@@ -77,9 +89,29 @@
 - **デフォルト**: `$HOME/.config`
 - **説明**: 設定ファイルのベースディレクトリ
 
+### Secrets
+
+#### `DOTFILES_1PASSWORD_VAULT`
+- **型**: string
+- **デフォルト**: `dotfiles`
+- **説明**: 1Password から secrets を読むときの vault 名
+- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+
+#### `DOTFILES_1PASSWORD_ITEM`
+- **型**: string
+- **デフォルト**: `shared-env`
+- **説明**: 1Password から secrets を読むときの item 名
+- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+
+#### `DOTFILES_1PASSWORD_AUTOLOAD`
+- **型**: boolean (1/0)
+- **デフォルト**: 0
+- **説明**: `config/bash_env.sh` / `config/claude_env.sh` で 1Password から secrets を自動読込する
+- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+
 ## ローカル設定
 
-`~/.zshrc.local`で以下のような環境変数を設定可能：
+`~/.zshrc.local` / `~/.zshenv.local` は、プロキシや PATH などの machine-specific な設定に使います。秘密情報は 1Password を推奨します。
 
 ```bash
 # プロキシ設定
