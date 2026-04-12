@@ -1,5 +1,2 @@
-# worktree per-repo sync list (local only, not committed)
-.worktree-sync
-
 # Sandbox internal files (created by git stash in CI/sandbox environments)
 /HEAD

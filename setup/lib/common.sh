@@ -102,18 +102,65 @@ function setup_tmux_config() {
     fi
 }
 
+function is_legacy_post_checkout_hook() {
+    local hook_path="$1"
+    local link_target=""
+
+    [[ -e "$hook_path" || -L "$hook_path" ]] || return 1
+
+    if [[ -L "$hook_path" ]]; then
+        link_target="$(readlink "$hook_path" 2>/dev/null || true)"
+        case "$link_target" in
+        */config/git/template/hooks/post-checkout)
+            return 0
+            ;;
+        esac
+    fi
+
+    [[ -f "$hook_path" ]] || return 1
+    grep -F -- '.worktree-sync' "$hook_path" >/dev/null 2>&1 || return 1
+    grep -F -- 'git-common-dir' "$hook_path" >/dev/null 2>&1 || return 1
+    return 0
+}
+
+function cleanup_legacy_post_checkout_hook() {
+    local hook_path="$1"
+
+    is_legacy_post_checkout_hook "$hook_path" || return 1
+    rm -f "$hook_path"
+    log_info "git hooks: Removed legacy post-checkout hook: $hook_path"
+}
+
+function cleanup_legacy_git_template_hooks() {
+    local config_home legacy_hook
+    config_home="$(setup_config_home)"
+    legacy_hook="${config_home}/git/template/hooks/post-checkout"
+
+    cleanup_legacy_post_checkout_hook "$legacy_hook" || true
+}
+
+function cleanup_legacy_existing_repo_hooks() {
+    local repo_root hook_path
+    repo_root="${HOME}/.ghq"
+    [[ -d "$repo_root" ]] || return 0
+
+    while IFS= read -r hook_path; do
+        cleanup_legacy_post_checkout_hook "$hook_path" || true
+    done < <(find "$repo_root" \( -type f -o -type l \) -path '*/.git/hooks/post-checkout' -print 2>/dev/null)
+}
+
 function setup_git_config() {
     local config_home
     config_home="$(setup_config_home)"
 
     # Git template のフック設定
     mkdir -p "${config_home}/git/template/hooks"
+    cleanup_legacy_git_template_hooks
+    cleanup_legacy_existing_repo_hooks
     set_config_file_target "/config/git/template/hooks/pre-commit" "${config_home}/git/template/hooks/pre-commit"
     chmod +x "${config_home}/git/template/hooks/pre-commit"
     set_config_file_target "/config/git/template/hooks/pre-push" "${config_home}/git/template/hooks/pre-push"
     chmod +x "${config_home}/git/template/hooks/pre-push"
-    set_config_file_target "/config/git/template/hooks/post-checkout" "${config_home}/git/template/hooks/post-checkout"
-    chmod +x "${config_home}/git/template/hooks/post-checkout"
 
     # Husky 用の初期化スクリプト
     set_config_file_target "/config/husky/init.sh" "${config_home}/husky/init.sh"
@@ -206,18 +253,6 @@ function setup_zsh_config() {
     fi
 }
 
-function setup_gwq_config() {
-    local config_home
-    config_home="$(setup_config_home)"
-
-    if [[ -e "${config_home}/gwq/config.toml" && ! -L "${config_home}/gwq/config.toml" ]]; then
-        mv "${config_home}/gwq/config.toml" "${config_home}/gwq/config.toml.backup.$(date +%Y%m%d%H%M%S)"
-        log_info "gwq config: Backed up existing config"
-    fi
-    mkdir -p "${config_home}/gwq"
-    set_config_file_target "/config/gwq/config.toml" "${config_home}/gwq/config.toml"
-}
-
 function setup_bin_links() {
     local source_file link_target existing_target backup_path
 
@@ -266,7 +301,6 @@ function common() {
     set_config_file_target "/config/peco/config.json" "${config_home}/peco/config.json"
     set_config_file "/config/tigrc" "/.tigrc"
 
-    setup_gwq_config
     setup_git_config
     setup_vim_config
     setup_neovim_config

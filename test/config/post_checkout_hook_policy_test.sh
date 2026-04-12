@@ -5,19 +5,12 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$ROOT_DIR/config/git/template/hooks/post-checkout"
 COMMON_LIB="$ROOT_DIR/setup/lib/common.sh"
 GITIGNORE_GLOBAL="$ROOT_DIR/config/git/gitignore_global"
+SETUP_SH="$ROOT_DIR/setup.sh"
 
-assert_file_exists() {
+assert_file_missing() {
     local path="$1"
-    if [[ ! -f "$path" ]]; then
-        echo "ASSERTION FAILED: expected file $path" >&2
-        return 1
-    fi
-}
-
-assert_executable() {
-    local path="$1"
-    if [[ ! -x "$path" ]]; then
-        echo "ASSERTION FAILED: expected $path to be executable" >&2
+    if [[ -e "$path" ]]; then
+        echo "ASSERTION FAILED: expected file to be absent: $path" >&2
         return 1
     fi
 }
@@ -31,63 +24,80 @@ assert_contains() {
     fi
 }
 
-assert_not_exists() {
-    local path="$1"
-    if [[ -e "$path" ]]; then
-        echo "ASSERTION FAILED: expected $path to not exist" >&2
+assert_not_contains() {
+    local needle="$1"
+    local file="$2"
+    if grep -F -- "$needle" "$file" >/dev/null 2>&1; then
+        echo "ASSERTION FAILED: expected not to contain '$needle' in $file" >&2
         return 1
     fi
 }
 
-# 期待: post-checkout フックが存在する
-assert_file_exists "$HOOK"
-
-# 期待: post-checkout フックが実行権限を持つ
-assert_executable "$HOOK"
-
-# 期待: .worktree-sync 読み取りロジックが含まれる
-assert_contains '.worktree-sync' "$HOOK"
-assert_contains 'git-common-dir' "$HOOK"
-assert_contains 'Skipped unsafe path' "$HOOK"
-
-# 期待: setup_git_config で post-checkout も template 配置される
-assert_contains 'set_config_file_target "/config/git/template/hooks/post-checkout" "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
-assert_contains 'chmod +x "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
-
-# 期待: gitignore_global に .worktree-sync が含まれる
-assert_contains '.worktree-sync' "$GITIGNORE_GLOBAL"
+assert_file_missing "$HOOK"
+assert_contains 'function cleanup_legacy_post_checkout_hook() {' "$COMMON_LIB"
+assert_contains 'function cleanup_legacy_git_template_hooks() {' "$COMMON_LIB"
+assert_contains 'function cleanup_legacy_existing_repo_hooks() {' "$COMMON_LIB"
+assert_contains 'cleanup_legacy_git_template_hooks' "$COMMON_LIB"
+assert_contains 'cleanup_legacy_existing_repo_hooks' "$COMMON_LIB"
+assert_not_contains 'set_config_file_target "/config/git/template/hooks/post-checkout" "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
+assert_not_contains 'chmod +x "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
+assert_not_contains '.worktree-sync' "$GITIGNORE_GLOBAL"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-main_repo="$tmp_dir/main"
-worktree_parent="$tmp_dir/worktrees"
-worktree_path="$worktree_parent/feature"
-escaped_source="$tmp_dir/escaped.txt"
-escaped_dest="$worktree_parent/escaped.txt"
+custom_config_home="$tmp_dir/custom-config"
+legacy_hook="$custom_config_home/git/template/hooks/post-checkout"
+mkdir -p "$(dirname "$legacy_hook")"
+cat >"$legacy_hook" <<'EOF'
+#!/bin/sh
+common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || exit 0
+[ -f "$main_worktree/.worktree-sync" ] || exit 0
+EOF
 
-mkdir -p "$main_repo" "$worktree_parent"
-GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git -C "$main_repo" init -q
-printf 'tracked\n' >"$main_repo/tracked.txt"
-git -C "$main_repo" add tracked.txt
-git -C "$main_repo" -c user.name=test -c user.email=test@example.com commit -qm init
+HOME="$tmp_dir/home" XDG_CONFIG_HOME="$custom_config_home" SETUP_SH="$SETUP_SH" bash <<'EOF'
+set -euo pipefail
+source "$SETUP_SH"
+cleanup_legacy_git_template_hooks
+[[ ! -e "$XDG_CONFIG_HOME/git/template/hooks/post-checkout" ]]
+EOF
 
-mkdir -p "$main_repo/config"
-printf '.envrc\nconfig/local.txt\n../escaped.txt\n' >"$main_repo/.worktree-sync"
-printf 'direnv\n' >"$main_repo/.envrc"
-printf 'local\n' >"$main_repo/config/local.txt"
-printf 'escaped\n' >"$escaped_source"
+mkdir -p "$(dirname "$legacy_hook")"
+cat >"$legacy_hook" <<'EOF'
+#!/bin/sh
+echo custom
+EOF
 
-mkdir -p "$main_repo/.git/hooks"
-if [[ ! "$HOOK" -ef "$main_repo/.git/hooks/post-checkout" ]]; then
-    cp "$HOOK" "$main_repo/.git/hooks/post-checkout"
-fi
-chmod +x "$main_repo/.git/hooks/post-checkout"
+HOME="$tmp_dir/home" XDG_CONFIG_HOME="$custom_config_home" SETUP_SH="$SETUP_SH" bash <<'EOF'
+set -euo pipefail
+source "$SETUP_SH"
+cleanup_legacy_git_template_hooks
+[[ -f "$XDG_CONFIG_HOME/git/template/hooks/post-checkout" ]]
+EOF
 
-git -C "$main_repo" worktree add -b feature "$worktree_path" -q
+legacy_repo_hook_dir="$tmp_dir/home/.ghq/example/repo/.git/hooks"
+legacy_repo_hook="$legacy_repo_hook_dir/post-checkout"
+mkdir -p "$legacy_repo_hook_dir"
+cat >"$legacy_repo_hook" <<'EOF'
+#!/bin/sh
+common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || exit 0
+[ -f "$main_worktree/.worktree-sync" ] || exit 0
+EOF
 
-assert_file_exists "$worktree_path/.envrc"
-assert_file_exists "$worktree_path/config/local.txt"
-assert_not_exists "$escaped_dest"
+custom_repo_hook_dir="$tmp_dir/home/.ghq/example/custom/.git/hooks"
+custom_repo_hook="$custom_repo_hook_dir/post-checkout"
+mkdir -p "$custom_repo_hook_dir"
+cat >"$custom_repo_hook" <<'EOF'
+#!/bin/sh
+echo custom
+EOF
+
+HOME="$tmp_dir/home" XDG_CONFIG_HOME="$custom_config_home" SETUP_SH="$SETUP_SH" bash <<'EOF'
+set -euo pipefail
+source "$SETUP_SH"
+cleanup_legacy_existing_repo_hooks
+[[ ! -e "$HOME/.ghq/example/repo/.git/hooks/post-checkout" ]]
+[[ -f "$HOME/.ghq/example/custom/.git/hooks/post-checkout" ]]
+EOF
 
 echo "post_checkout_hook_policy_test: ok"

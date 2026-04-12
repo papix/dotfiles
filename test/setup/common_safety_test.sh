@@ -94,7 +94,6 @@ source "$SETUP_SH"
 set_config_file() { :; }
 set_config_file_target() { :; }
 setup_tmux_config() { :; }
-setup_gwq_config() { :; }
 setup_git_config() { :; }
 setup_vim_config() { :; }
 setup_neovim_config() { :; }
