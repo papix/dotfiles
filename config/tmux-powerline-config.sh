@@ -9,7 +9,7 @@ export TMUX_POWERLINE_PATCHED_FONT_IN_USE="true"
 
 # Theme and segment directories
 # config.sh がシンボリックリンクなら、dotfiles側の themes/segments を優先する
-tmux_powerline_config_link="${HOME}/.config/tmux-powerline/config.sh"
+tmux_powerline_config_link="${XDG_CONFIG_HOME:-${HOME}/.config}/tmux-powerline/config.sh"
 if [[ -L "${tmux_powerline_config_link}" ]]; then
     tmux_powerline_config_target="$(readlink "${tmux_powerline_config_link}")"
     # readlinkが相対パスを返す場合はリンク元ディレクトリ基準で絶対化する
@@ -20,8 +20,8 @@ if [[ -L "${tmux_powerline_config_link}" ]]; then
     export TMUX_POWERLINE_DIR_USER_THEMES="${tmux_powerline_config_dir}/tmux-powerline/themes"
     export TMUX_POWERLINE_DIR_USER_SEGMENTS="${tmux_powerline_config_dir}/tmux-powerline/segments"
 else
-    export TMUX_POWERLINE_DIR_USER_THEMES="${HOME}/.config/tmux-powerline/themes"
-    export TMUX_POWERLINE_DIR_USER_SEGMENTS="${HOME}/.config/tmux-powerline/segments"
+    export TMUX_POWERLINE_DIR_USER_THEMES="${XDG_CONFIG_HOME:-${HOME}/.config}/tmux-powerline/themes"
+    export TMUX_POWERLINE_DIR_USER_SEGMENTS="${XDG_CONFIG_HOME:-${HOME}/.config}/tmux-powerline/segments"
 fi
 
 # Branch name max length

@@ -4,9 +4,10 @@
 ########################################
 
 # Determine config directory
-if [[ -d "${HOME}/.config/zsh" ]]; then
-    # If ~/.config/zsh exists (after setup.sh), use it
-    ZSH_CONFIG_DIR="${HOME}/.config/zsh"
+config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
+if [[ -d "${config_home}/zsh" ]]; then
+    # If $XDG_CONFIG_HOME/zsh exists (after setup.sh), use it
+    ZSH_CONFIG_DIR="${config_home}/zsh"
 elif [[ -d "$(dirname ${(%):-%x})/zsh" ]]; then
     # During development, use relative path
     ZSH_CONFIG_DIR="$(dirname ${(%):-%x})/zsh"

@@ -51,8 +51,8 @@ assert_contains 'git-common-dir' "$HOOK"
 assert_contains 'Skipped unsafe path' "$HOOK"
 
 # 期待: setup_git_config で post-checkout も template 配置される
-assert_contains 'set_config_file "/config/git/template/hooks/post-checkout"' "$COMMON_LIB"
-assert_contains 'chmod +x "${HOME}/.config/git/template/hooks/post-checkout"' "$COMMON_LIB"
+assert_contains 'set_config_file_target "/config/git/template/hooks/post-checkout" "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
+assert_contains 'chmod +x "${config_home}/git/template/hooks/post-checkout"' "$COMMON_LIB"
 
 # 期待: gitignore_global に .worktree-sync が含まれる
 assert_contains '.worktree-sync' "$GITIGNORE_GLOBAL"

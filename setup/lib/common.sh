@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-function set_config_file() {
+function setup_config_home() {
+    printf '%s\n' "${XDG_CONFIG_HOME:-${HOME}/.config}"
+}
+
+function setup_cache_home() {
+    printf '%s\n' "${XDG_CACHE_HOME:-${HOME}/.cache}"
+}
+
+function setup_state_home() {
+    printf '%s\n' "${XDG_STATE_HOME:-${HOME}/.local/state}"
+}
+
+function set_config_file_target() {
     local SOURCE DEST DEST_DIR READLINK
     SOURCE="${DOTFILES_DIR}$1"
-    DEST="${HOME}$2"
+    DEST="$2"
 
     # ソースファイルの存在確認
     if [ ! -e "$SOURCE" ]; then
@@ -54,14 +66,21 @@ function set_config_file() {
     fi
 }
 
+function set_config_file() {
+    set_config_file_target "$1" "${HOME}$2"
+}
+
 function setup_tmux_config() {
+    local config_home
+    config_home="$(setup_config_home)"
+
     set_config_file "/config/tmux.conf" "/.tmux.conf"
 
     # Setup tmux-powerline configuration
-    mkdir -p "${HOME}/.config/tmux-powerline/themes"
-    mkdir -p "${HOME}/.config/tmux-powerline/segments"
-    set_config_file "/config/tmux-powerline/themes/custom.sh" "/.config/tmux-powerline/themes/custom.sh"
-    set_config_file "/config/tmux-powerline-config.sh" "/.config/tmux-powerline/config.sh"
+    mkdir -p "${config_home}/tmux-powerline/themes"
+    mkdir -p "${config_home}/tmux-powerline/segments"
+    set_config_file_target "/config/tmux-powerline/themes/custom.sh" "${config_home}/tmux-powerline/themes/custom.sh"
+    set_config_file_target "/config/tmux-powerline-config.sh" "${config_home}/tmux-powerline/config.sh"
 
     # Link custom tmux-powerline segments directory
     if [[ -d "${HOME}/.tmux/plugins/tmux-powerline/segments" ]]; then
@@ -84,21 +103,24 @@ function setup_tmux_config() {
 }
 
 function setup_git_config() {
+    local config_home
+    config_home="$(setup_config_home)"
+
     # Git template のフック設定
-    mkdir -p "${HOME}/.config/git/template/hooks"
-    set_config_file "/config/git/template/hooks/pre-commit" "/.config/git/template/hooks/pre-commit"
-    chmod +x "${HOME}/.config/git/template/hooks/pre-commit"
-    set_config_file "/config/git/template/hooks/pre-push" "/.config/git/template/hooks/pre-push"
-    chmod +x "${HOME}/.config/git/template/hooks/pre-push"
-    set_config_file "/config/git/template/hooks/post-checkout" "/.config/git/template/hooks/post-checkout"
-    chmod +x "${HOME}/.config/git/template/hooks/post-checkout"
+    mkdir -p "${config_home}/git/template/hooks"
+    set_config_file_target "/config/git/template/hooks/pre-commit" "${config_home}/git/template/hooks/pre-commit"
+    chmod +x "${config_home}/git/template/hooks/pre-commit"
+    set_config_file_target "/config/git/template/hooks/pre-push" "${config_home}/git/template/hooks/pre-push"
+    chmod +x "${config_home}/git/template/hooks/pre-push"
+    set_config_file_target "/config/git/template/hooks/post-checkout" "${config_home}/git/template/hooks/post-checkout"
+    chmod +x "${config_home}/git/template/hooks/post-checkout"
 
     # Husky 用の初期化スクリプト
-    set_config_file "/config/husky/init.sh" "/.config/husky/init.sh"
+    set_config_file_target "/config/husky/init.sh" "${config_home}/husky/init.sh"
 
     # init.templateDir の設定
     existing_template=$(git config --global --get init.templateDir 2>/dev/null || true)
-    target_template="${HOME}/.config/git/template"
+    target_template="${config_home}/git/template"
 
     if [[ -z "$existing_template" ]]; then
         git config --global init.templateDir "$target_template"
@@ -149,54 +171,99 @@ function setup_vim_config() {
 }
 
 function setup_neovim_config() {
+    local config_home
+    config_home="$(setup_config_home)"
+
     # Setup Neovim configuration
-    mkdir -p "${HOME}/.config/nvim"
-    set_config_file "/config/nvim/init.lua" "/.config/nvim/init.lua"
-    set_config_file "/config/nvim/lua" "/.config/nvim/lua"
+    mkdir -p "${config_home}/nvim"
+    set_config_file_target "/config/nvim/init.lua" "${config_home}/nvim/init.lua"
+    set_config_file_target "/config/nvim/lua" "${config_home}/nvim/lua"
 
     # 互換用: init.vim と init.lua の両方が未配置の場合のみ ~/.vimrc を参照
-    if [[ ! -e "${HOME}/.config/nvim/init.vim" && ! -e "${HOME}/.config/nvim/init.lua" ]]; then
-        ln -s "${HOME}/.vimrc" "${HOME}/.config/nvim/init.vim"
-        log_info "Neovim: Created fallback symlink: ~/.config/nvim/init.vim => ~/.vimrc"
+    if [[ ! -e "${config_home}/nvim/init.vim" && ! -e "${config_home}/nvim/init.lua" ]]; then
+        ln -s "${HOME}/.vimrc" "${config_home}/nvim/init.vim"
+        log_info "Neovim: Created fallback symlink: ${config_home}/nvim/init.vim => ~/.vimrc"
     fi
 }
 
 function setup_zsh_config() {
+    local config_home
+    config_home="$(setup_config_home)"
+
     # Setup zsh modules
-    mkdir -p "${HOME}/.config"
+    mkdir -p "${config_home}"
     if [[ -d "${DOTFILES_DIR}/config/zsh" ]]; then
         # Backup existing directory if not a symlink
-        if [[ -e "${HOME}/.config/zsh" ]] && [[ ! -L "${HOME}/.config/zsh" ]]; then
-            mv "${HOME}/.config/zsh" "${HOME}/.config/zsh.backup.$(date +%Y%m%d%H%M%S)"
+        if [[ -e "${config_home}/zsh" ]] && [[ ! -L "${config_home}/zsh" ]]; then
+            mv "${config_home}/zsh" "${config_home}/zsh.backup.$(date +%Y%m%d%H%M%S)"
             log_info "zsh modules: Backed up existing config"
-        elif [[ -L "${HOME}/.config/zsh" ]]; then
-            rm "${HOME}/.config/zsh"
+        elif [[ -L "${config_home}/zsh" ]]; then
+            rm "${config_home}/zsh"
         fi
         # Create symlink instead of copying
-        ln -s "${DOTFILES_DIR}/config/zsh" "${HOME}/.config/zsh"
-        log_info "zsh modules: ${DOTFILES_DIR}/config/zsh => ${HOME}/.config/zsh (symlink)"
+        ln -s "${DOTFILES_DIR}/config/zsh" "${config_home}/zsh"
+        log_info "zsh modules: ${DOTFILES_DIR}/config/zsh => ${config_home}/zsh (symlink)"
     fi
 }
 
 function setup_gwq_config() {
-    if [[ -e "${HOME}/.config/gwq/config.toml" && ! -L "${HOME}/.config/gwq/config.toml" ]]; then
-        mv "${HOME}/.config/gwq/config.toml" "${HOME}/.config/gwq/config.toml.backup.$(date +%Y%m%d%H%M%S)"
+    local config_home
+    config_home="$(setup_config_home)"
+
+    if [[ -e "${config_home}/gwq/config.toml" && ! -L "${config_home}/gwq/config.toml" ]]; then
+        mv "${config_home}/gwq/config.toml" "${config_home}/gwq/config.toml.backup.$(date +%Y%m%d%H%M%S)"
         log_info "gwq config: Backed up existing config"
     fi
-    mkdir -p "${HOME}/.config/gwq"
-    set_config_file "/config/gwq/config.toml" "/.config/gwq/config.toml"
+    mkdir -p "${config_home}/gwq"
+    set_config_file_target "/config/gwq/config.toml" "${config_home}/gwq/config.toml"
+}
+
+function setup_bin_links() {
+    local source_file link_target existing_target backup_path
+
+    mkdir -p "${HOME}/.local/bin"
+
+    for source_file in "${DOTFILES_DIR}"/bin/*; do
+        [[ -f "$source_file" ]] || continue
+        [[ -x "$source_file" ]] || continue
+
+        link_target="${HOME}/.local/bin/$(basename "$source_file")"
+        if [[ -L "$link_target" ]]; then
+            existing_target="$(readlink "$link_target")"
+            if [[ "$existing_target" = "$source_file" ]]; then
+                log_info "symbolic link: already exists"
+                continue
+            fi
+        fi
+
+        if [[ -e "$link_target" || -L "$link_target" ]]; then
+            backup_path="${link_target}.backup.$(date +%Y%m%d%H%M%S)"
+            log_warn "symbolic link conflict: backing up ${link_target} to ${backup_path}"
+            mv "$link_target" "$backup_path"
+        fi
+
+        log_action "symbolic link: $source_file => $link_target"
+        ln -s "$source_file" "$link_target"
+    done
 }
 
 function common() {
+    local config_home cache_home state_home
+    config_home="$(setup_config_home)"
+    cache_home="$(setup_cache_home)"
+    state_home="$(setup_state_home)"
+
+    mkdir -p "${state_home}/zsh"
+    mkdir -p "${cache_home}/dotfiles"
     set_config_file "/config/zshrc" "/.zshrc"
     set_config_file "/config/zshenv" "/.zshenv"
-    set_config_file "/config/bash_env.sh" "/.config/bash_env.sh"
-    set_config_file "/config/claude_env.sh" "/.config/claude_env.sh"
+    set_config_file_target "/config/bash_env.sh" "${config_home}/bash_env.sh"
+    set_config_file_target "/config/claude_env.sh" "${config_home}/claude_env.sh"
 
     setup_tmux_config
 
-    mkdir -p "${HOME}/.config/peco"
-    set_config_file "/config/peco/config.json" "/.config/peco/config.json"
+    mkdir -p "${config_home}/peco"
+    set_config_file_target "/config/peco/config.json" "${config_home}/peco/config.json"
     set_config_file "/config/tigrc" "/.tigrc"
 
     setup_gwq_config
@@ -204,8 +271,5 @@ function common() {
     setup_vim_config
     setup_neovim_config
     setup_zsh_config
-
-    # Setup bin directory - PATH is now configured in config/zshenv
-    # No need to create symlinks since we're using PATH
-    log_info "bin directory: PATH will be configured via config/zshenv"
+    setup_bin_links
 }

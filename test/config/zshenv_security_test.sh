@@ -26,6 +26,13 @@ assert_not_contains() {
 assert_contains "export LESS='-FRX'" "$ZSHENV_FILE"
 assert_not_contains "export LESS='-FRX -R'" "$ZSHENV_FILE"
 
+# 期待: XDG と履歴ファイルは state/cache 配下を使う
+assert_contains 'export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${HOME}/.cache}"' "$ZSHENV_FILE"
+assert_contains 'export XDG_STATE_HOME="${XDG_STATE_HOME:-${HOME}/.local/state}"' "$ZSHENV_FILE"
+assert_contains 'export HISTFILE="${XDG_STATE_HOME}/zsh/history"' "$ZSHENV_FILE"
+assert_contains 'export CLAUDE_ENV_FILE="${XDG_CONFIG_HOME}/claude_env.sh"' "$ZSHENV_FILE"
+assert_contains 'export DOTFILES_1PASSWORD_VAULT="${DOTFILES_1PASSWORD_VAULT:-dotfiles}"' "$ZSHENV_FILE"
+
 # 期待: VSCode IPC パス検出は find ベースで安全に行う
 assert_contains "find /tmp -maxdepth 1 -name 'vscode-ipc-*'" "$ZSHENV_FILE"
 assert_contains "sort -rn |" "$ZSHENV_FILE"

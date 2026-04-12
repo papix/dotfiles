@@ -83,8 +83,10 @@ for file in \
 
     assert_contains "$output" "PLENV_ROOT=$PLENV_ROOT_DIR" "$file should export PLENV_ROOT"
     assert_contains "$output" "RBENV_ROOT=$RBENV_ROOT_DIR" "$file should export RBENV_ROOT"
+    assert_contains "$path_value" "$TMP_HOME/.local/bin" "$file should add local bin"
     assert_contains "$path_value" "$PLENV_ROOT_DIR/bin" "$file should add plenv bin"
     assert_contains "$path_value" "$PLENV_ROOT_DIR/shims" "$file should add plenv shims"
+    assert_path_occurs_before "$path_value" "$TMP_HOME/.local/bin" "$PLENV_ROOT_DIR/shims" "$file should prioritize local bin over anyenv shims"
     assert_path_occurs_before "$path_value" "$PLENV_ROOT_DIR/shims" "$PLENV_ROOT_DIR/bin" "$file should place plenv shims before bin"
 done
 
@@ -93,8 +95,10 @@ zsh_path_value="$(printf '%s\n' "$zsh_output" | sed -n 's/^PATH=//p')"
 
 assert_contains "$zsh_output" "PLENV_ROOT=$PLENV_ROOT_DIR" "zshenv should export PLENV_ROOT"
 assert_contains "$zsh_output" "RBENV_ROOT=$RBENV_ROOT_DIR" "zshenv should export RBENV_ROOT"
+assert_contains "$zsh_path_value" "$TMP_HOME/.local/bin" "zshenv should add local bin"
 assert_contains "$zsh_path_value" "$PLENV_ROOT_DIR/bin" "zshenv should add plenv bin"
 assert_contains "$zsh_path_value" "$PLENV_ROOT_DIR/shims" "zshenv should add plenv shims"
+assert_path_occurs_before "$zsh_path_value" "$TMP_HOME/.local/bin" "$PLENV_ROOT_DIR/shims" "zshenv should prioritize local bin over anyenv shims"
 assert_path_occurs_before "$zsh_path_value" "$PLENV_ROOT_DIR/shims" "$PLENV_ROOT_DIR/bin" "zshenv should place plenv shims before bin"
 
 echo "anyenv_env_paths_test: ok"

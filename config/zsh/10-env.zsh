@@ -29,36 +29,92 @@ if [[ -n "$COMMAND_CACHE[brew]" ]]; then
 fi
 
 # BASH_ENV 設定（非インタラクティブ bash 用）
-if [[ -z "$BASH_ENV" && -f "$HOME/.config/bash_env.sh" ]]; then
-    export BASH_ENV="$HOME/.config/bash_env.sh"
+if [[ -z "$BASH_ENV" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/bash_env.sh" ]]; then
+    export BASH_ENV="${XDG_CONFIG_HOME:-$HOME/.config}/bash_env.sh"
 fi
 
-# NPM_TOKEN キャッシュ（gh auth token の結果を ~/.cache/npm-token に保存）
+function __dotfiles_npm_token_cache_path() {
+    print -r -- "${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/npm-token"
+}
+
+function __dotfiles_file_age_seconds() {
+    local target_file="$1"
+    local now_epoch mtime
+
+    now_epoch="$(date +%s)"
+    mtime="$(stat -c %Y "$target_file" 2>/dev/null || stat -f %m "$target_file" 2>/dev/null || print -r -- 0)"
+    [[ "$mtime" -gt 0 ]] 2>/dev/null || return 1
+    print -r -- "$((now_epoch - mtime))"
+}
+
+function __dotfiles_write_secret_cache() {
+    local cache_file="$1"
+    local secret_value="$2"
+    local old_umask
+
+    mkdir -p "${cache_file:h}"
+    old_umask="$(umask)"
+    umask 077
+    print -n -- "$secret_value" >"$cache_file"
+    umask "$old_umask"
+}
+
+function __dotfiles_load_npm_token_from_1password() {
+    local token=""
+    local token_cache=""
+
+    [[ -n "$COMMAND_CACHE[op]" ]] || return 1
+
+    token="$(op read "op://${DOTFILES_1PASSWORD_VAULT:-dotfiles}/${DOTFILES_1PASSWORD_ITEM:-shared-env}/NPM_TOKEN" 2>/dev/null)" || return 1
+    [[ -n "$token" ]] || return 1
+
+    export NPM_TOKEN="$token"
+    token_cache="$(__dotfiles_npm_token_cache_path)"
+    __dotfiles_write_secret_cache "$token_cache" "$token"
+    return 0
+}
+
+function __dotfiles_load_npm_token_from_cache() {
+    local token_cache=""
+
+    token_cache="$(__dotfiles_npm_token_cache_path)"
+    [[ -f "$token_cache" ]] || return 1
+
+    export NPM_TOKEN="$(<"$token_cache")"
+}
+
+function __dotfiles_refresh_npm_token_cache_from_gh() {
+    local token_cache=""
+    local need_refresh=0
+    local token=""
+    local cache_age_seconds=""
+
+    [[ -n "$COMMAND_CACHE[gh]" ]] || return 1
+
+    token_cache="$(__dotfiles_npm_token_cache_path)"
+    if [[ ! -f "$token_cache" ]]; then
+        need_refresh=1
+    else
+        cache_age_seconds="$(__dotfiles_file_age_seconds "$token_cache" 2>/dev/null || print -r -- 999999999)"
+        if [[ "$cache_age_seconds" -gt 86400 ]]; then
+            need_refresh=1
+        fi
+    fi
+
+    ((need_refresh)) || return 1
+
+    token="$(gh auth token 2>/dev/null)" || return 1
+    [[ -n "$token" ]] || return 1
+
+    __dotfiles_write_secret_cache "$token_cache" "$token"
+    return 0
+}
+
+# 対話シェル起動時に 1Password 認証プロンプトを出さないよう、
+# zsh 起動では既存キャッシュ/gh auth token のみを使う
 if [[ -z "$NPM_TOKEN" ]]; then
-    local npm_token_cache="$HOME/.cache/npm-token"
-    # キャッシュ更新: gh コマンドがある場合のみ
-    if [[ -n "$COMMAND_CACHE[gh]" ]]; then
-        local need_refresh=0
-        if [[ ! -f "$npm_token_cache" ]]; then
-            need_refresh=1
-        elif [[ -n "$(find "$npm_token_cache" -mmin +1440 2>/dev/null)" ]]; then
-            need_refresh=1
-        fi
-        if (( need_refresh )); then
-            local token
-            token="$(gh auth token 2>/dev/null)"
-            if [[ -n "$token" ]]; then
-                mkdir -p "${npm_token_cache:h}"
-                local old_umask
-                old_umask="$(umask)"
-                umask 077
-                print -n "$token" > "$npm_token_cache"
-                umask "$old_umask"
-            fi
-        fi
-    fi
-    # キャッシュから読み込み
-    if [[ -f "$npm_token_cache" ]]; then
-        export NPM_TOKEN="$(< "$npm_token_cache")"
-    fi
+    __dotfiles_refresh_npm_token_cache_from_gh ||
+        __dotfiles_load_npm_token_from_cache ||
+        true
+    [[ -n "$NPM_TOKEN" ]] || __dotfiles_load_npm_token_from_cache || true
 fi
