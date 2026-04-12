@@ -26,27 +26,39 @@ function __setup_doctor_command_status() {
 function __setup_doctor_print_text() {
     local os_name="$1"
     local profile_name="${SETUP_PROFILE:-full}"
-    local profile_file
+    local package_file=""
     local package_count
+    local package_files_output
+    local package_files=()
 
-    profile_file="$(setup_profile_file_path "$os_name" "$profile_name" 2>/dev/null || true)"
+    package_files_output="$(setup_list_package_files "$os_name" "$profile_name" 2>/dev/null || true)"
+    while IFS= read -r package_file; do
+        [[ -n "$package_file" ]] || continue
+        package_files+=("$package_file")
+    done <<<"$package_files_output"
 
     echo "Doctor mode"
     echo "Profile: ${profile_name}"
     echo "Detected OS: ${os_name}"
 
-    if [[ -n "$profile_file" ]]; then
-        if [[ -f "$profile_file" ]]; then
+    if [[ "${#package_files[@]}" -gt 0 ]]; then
+        package_count="unavailable"
+        if setup_load_packages "$os_name" "$profile_name" >/dev/null 2>&1; then
             package_count="$(setup_load_packages "$os_name" "$profile_name" | wc -l | tr -d '[:space:]')"
-            echo "Profile file: ${profile_file} (ok)"
-            echo "Profile packages: ${package_count}"
-        else
-            echo "Profile file: ${profile_file} (missing)"
-            echo "Profile packages: unavailable"
         fi
+
+        echo "Package files:"
+        for package_file in "${package_files[@]}"; do
+            if [[ -f "$package_file" ]]; then
+                echo "  - ${package_file} (ok)"
+            else
+                echo "  - ${package_file} (missing)"
+            fi
+        done
+        echo "Package entries: ${package_count}"
     else
-        echo "Profile file: unavailable"
-        echo "Profile packages: unavailable"
+        echo "Package files: unavailable"
+        echo "Package entries: unavailable"
     fi
 
     echo "Required commands:"
@@ -62,21 +74,25 @@ function __setup_doctor_print_text() {
 function __setup_doctor_print_json() {
     local os_name="$1"
     local profile_name="${SETUP_PROFILE:-full}"
-    local profile_file profile_exists profile_path_json
+    local package_file="" package_exists package_path_json
     local command_name command_path command_status path_json
+    local package_files_json="" package_separator=""
     local commands_json="" separator=""
     local escaped_os escaped_profile
     local command_names=(git curl zsh jq shellcheck shfmt brew)
+    local package_files_output
 
-    profile_file="$(setup_profile_file_path "$os_name" "$profile_name" 2>/dev/null || true)"
-    profile_exists="false"
-    profile_path_json="null"
-    if [[ -n "$profile_file" ]]; then
-        if [[ -f "$profile_file" ]]; then
-            profile_exists="true"
+    package_files_output="$(setup_list_package_files "$os_name" "$profile_name" 2>/dev/null || true)"
+    while IFS= read -r package_file; do
+        [[ -n "$package_file" ]] || continue
+        package_exists="false"
+        if [[ -f "$package_file" ]]; then
+            package_exists="true"
         fi
-        profile_path_json="\"$(__setup_doctor_escape_json "$profile_file")\""
-    fi
+        package_path_json="\"$(__setup_doctor_escape_json "$package_file")\""
+        package_files_json="${package_files_json}${package_separator}{\"path\":${package_path_json},\"exists\":${package_exists}}"
+        package_separator=","
+    done <<<"$package_files_output"
 
     for command_name in "${command_names[@]}"; do
         command_path="$(__setup_doctor_command_path "$command_name")"
@@ -94,8 +110,8 @@ function __setup_doctor_print_json() {
 
     escaped_os="$(__setup_doctor_escape_json "$os_name")"
     escaped_profile="$(__setup_doctor_escape_json "$profile_name")"
-    printf '{"mode":"doctor","os":"%s","profile":"%s","profile_file":{"path":%s,"exists":%s},"commands":[%s]}\n' \
-        "$escaped_os" "$escaped_profile" "$profile_path_json" "$profile_exists" "$commands_json"
+    printf '{"mode":"doctor","os":"%s","profile":"%s","package_files":[%s],"commands":[%s]}\n' \
+        "$escaped_os" "$escaped_profile" "$package_files_json" "$commands_json"
 }
 
 function setup_run_doctor() {

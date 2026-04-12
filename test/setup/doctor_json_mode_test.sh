@@ -17,7 +17,7 @@ assert_text_contains() {
 json_output="$(bash "$SETUP_SH" --doctor --json)"
 assert_text_contains '"mode":"doctor"' "$json_output"
 assert_text_contains '"profile":"' "$json_output"
-assert_text_contains '"profile_file":' "$json_output"
+assert_text_contains '"package_files":[' "$json_output"
 assert_text_contains '"commands":[' "$json_output"
 assert_text_contains '"name":"shfmt"' "$json_output"
 

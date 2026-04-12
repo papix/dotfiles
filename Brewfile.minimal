@@ -1,0 +1,6 @@
+brew "anyenv"
+brew "git"
+brew "jq"
+brew "neovim"
+brew "tmux"
+brew "zsh"

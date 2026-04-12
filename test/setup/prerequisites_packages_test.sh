@@ -4,8 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SETUP_SH="$ROOT_DIR/setup.sh"
 PACKAGES_LIB="$ROOT_DIR/setup/lib/packages.sh"
-DARWIN_FULL="$ROOT_DIR/setup/profiles/darwin-full.txt"
-LINUX_FULL="$ROOT_DIR/setup/profiles/linux-full.txt"
+DARWIN_FULL="$ROOT_DIR/Brewfile"
+DARWIN_OS="$ROOT_DIR/Brewfile.darwin"
+LINUX_FULL="$ROOT_DIR/Brewfile"
+LINUX_OS="$ROOT_DIR/Brewfile.linux"
 
 assert_file_exists() {
     local path="$1"
@@ -26,14 +28,16 @@ assert_contains() {
 
 assert_file_exists "$PACKAGES_LIB"
 assert_file_exists "$DARWIN_FULL"
+assert_file_exists "$DARWIN_OS"
 assert_file_exists "$LINUX_FULL"
+assert_file_exists "$LINUX_OS"
 
 # shellcheck disable=SC2016
 assert_contains 'source "$SETUP_LIB_DIR/packages.sh"' "$SETUP_SH"
 assert_contains 'setup_load_packages' "$PACKAGES_LIB"
-assert_contains 'jq' "$DARWIN_FULL"
-assert_contains 'jq' "$LINUX_FULL"
-assert_contains 'shfmt' "$DARWIN_FULL"
-assert_contains 'shfmt' "$LINUX_FULL"
+assert_contains 'brew "jq"' "$DARWIN_FULL"
+assert_contains 'brew "shfmt"' "$LINUX_FULL"
+assert_contains 'cask "1password-cli"' "$DARWIN_OS"
+assert_contains 'cask "1password-cli"' "$LINUX_OS"
 
 echo "prerequisites_packages_test: ok"

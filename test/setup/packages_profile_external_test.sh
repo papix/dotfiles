@@ -23,18 +23,20 @@ assert_contains() {
     fi
 }
 
-assert_file_exists "$ROOT_DIR/setup/profiles/darwin-full.txt"
-assert_file_exists "$ROOT_DIR/setup/profiles/darwin-minimal.txt"
-assert_file_exists "$ROOT_DIR/setup/profiles/linux-full.txt"
-assert_file_exists "$ROOT_DIR/setup/profiles/linux-minimal.txt"
+assert_file_exists "$ROOT_DIR/Brewfile"
+assert_file_exists "$ROOT_DIR/Brewfile.darwin"
+assert_file_exists "$ROOT_DIR/Brewfile.linux"
+assert_file_exists "$ROOT_DIR/Brewfile.minimal"
+assert_file_exists "$ROOT_DIR/Brewfile.minimal.darwin"
+assert_file_exists "$ROOT_DIR/Brewfile.minimal.linux"
 assert_file_exists "$PACKAGES_LIB"
 assert_file_exists "$LOCAL_LIB"
 
 # shellcheck disable=SC2016
 assert_contains 'source "$SETUP_LIB_DIR/packages.sh"' "$SETUP_SH"
 assert_contains 'setup_load_packages' "$PACKAGES_LIB"
-assert_contains 'setup/profiles' "$PACKAGES_LIB"
-# shellcheck disable=SC2016
-assert_contains 'brew install "${packages[@]}"' "$LOCAL_LIB"
+assert_contains 'Brewfile' "$PACKAGES_LIB"
+assert_contains 'setup_list_package_files' "$PACKAGES_LIB"
+assert_contains 'brew bundle --file="$package_file" --no-upgrade' "$LOCAL_LIB"
 
 echo "packages_profile_external_test: ok"

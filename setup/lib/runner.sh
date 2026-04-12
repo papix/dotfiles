@@ -2,7 +2,14 @@
 set -euo pipefail
 
 function setup_should_run_local_packages() {
-    [[ "${SETUP_PROFILE:-full}" = "full" ]]
+    case "${SETUP_PROFILE:-full}" in
+    full | minimal)
+        return 0
+        ;;
+    *)
+        return 1
+        ;;
+    esac
 }
 
 function setup_print_dry_run_plan() {
