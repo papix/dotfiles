@@ -16,9 +16,8 @@ elif [[ -x "$ROOT_DIR/bin/lint-shell" ]]; then
         echo "[ERROR] lint-shell check failed."
         echo "Fix shellcheck findings and retry."
         echo ""
-        echo "To bypass this check (use with caution):"
+        echo "To skip this check temporarily:"
         echo "  SKIP=lint-shell git commit -m 'message'"
-        echo "  or: git commit --no-verify"
         exit 1
     fi
     echo "[lint-shell] Shellcheck suite passed."
@@ -48,9 +47,8 @@ if ! gitleaks protect --staged --verbose --redact; then
     echo "[ERROR] gitleaks detected potential secrets in your commit."
     echo "Please review and remove any sensitive information."
     echo ""
-    echo "To bypass this check (use with caution):"
+    echo "To skip this check temporarily:"
     echo "  SKIP=gitleaks git commit -m 'message'"
-    echo "  or: git commit --no-verify"
     exit 1
 fi
 

@@ -16,7 +16,7 @@ scan_gitleaks() {
         echo "[ERROR] gitleaks detected potential secrets in pushed commits."
         echo "Please review and remove any sensitive information."
         echo ""
-        echo "To bypass this check (use with caution):"
+        echo "To skip this check temporarily:"
         echo "  SKIP=gitleaks git push"
         return 1
     fi

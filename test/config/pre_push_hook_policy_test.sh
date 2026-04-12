@@ -22,15 +22,25 @@ assert_contains() {
     fi
 }
 
+assert_not_contains() {
+    local needle="$1"
+    local file="$2"
+    if grep -F -- "$needle" "$file" >/dev/null 2>&1; then
+        echo "ASSERTION FAILED: expected not to contain '$needle' in $file" >&2
+        return 1
+    fi
+}
+
 # 期待: pre-push フックが存在し、gitleaks を実行する
 assert_file_exists "$HOOK"
 assert_contains 'SKIP:-' "$HOOK"
 assert_contains 'gitleaks' "$HOOK"
 assert_contains '--log-opts' "$HOOK"
 assert_contains 'while read -r local_ref local_sha remote_ref remote_sha' "$HOOK"
+assert_not_contains '--no-verify' "$HOOK"
 
 # 期待: setup_git_config で pre-push も template 配置される
-assert_contains 'set_config_file "/config/git/template/hooks/pre-push"' "$COMMON_LIB"
-assert_contains 'chmod +x "${HOME}/.config/git/template/hooks/pre-push"' "$COMMON_LIB"
+assert_contains 'set_config_file_target "/config/git/template/hooks/pre-push" "${config_home}/git/template/hooks/pre-push"' "$COMMON_LIB"
+assert_contains 'chmod +x "${config_home}/git/template/hooks/pre-push"' "$COMMON_LIB"
 
 echo "pre_push_hook_policy_test: ok"
