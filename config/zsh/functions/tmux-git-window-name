@@ -93,8 +93,13 @@ function tmux_git_window_name_collect_window_labels() {
 
     (( ${#labels[@]} > 0 )) || return 1
 
-    local IFS="/"
-    print -r -- "${labels[*]}"
+    local joined_labels="${labels[1]}"
+    local idx
+    for (( idx = 2; idx <= ${#labels[@]}; idx++ )); do
+        joined_labels+=" | ${labels[idx]}"
+    done
+
+    print -r -- "$joined_labels"
 }
 
 function tmux_git_window_name_fallback_title() {

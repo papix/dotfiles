@@ -16,6 +16,18 @@ assert_eq() {
     fi
 }
 
+assert_file_eq() {
+    local expected_file="$1"
+    local actual_file="$2"
+    local message="$3"
+    if ! cmp -s "$expected_file" "$actual_file"; then
+        echo "ASSERTION FAILED: $message" >&2
+        echo "  expected bytes: $(od -An -tx1 -v "$expected_file" | tr -d '\n' | sed 's/^ *//')" >&2
+        echo "  actual bytes  : $(od -An -tx1 -v "$actual_file" | tr -d '\n' | sed 's/^ *//')" >&2
+        exit 1
+    fi
+}
+
 if [[ ! -x "$COPY_SCRIPT" ]]; then
     echo "ASSERTION FAILED: copy-to-clipboard script must exist and be executable" >&2
     exit 1
@@ -45,5 +57,12 @@ assert_eq "from-arg" "$(cat "$out_file")" "copy-to-clipboard should copy CLI arg
 : >"$out_file"
 printf 'from-stdin' | MOCK_COPY_OUT="$out_file" PATH="$mock_bin:$base_path" "$COPY_SCRIPT"
 assert_eq "from-stdin" "$(cat "$out_file")" "copy-to-clipboard should copy stdin when no argument is provided"
+
+# 期待: 標準入力の末尾改行を保持する
+expected_file="$tmp_dir/expected-stdin.txt"
+printf 'from-stdin\n' >"$expected_file"
+: >"$out_file"
+printf 'from-stdin\n' | MOCK_COPY_OUT="$out_file" PATH="$mock_bin:$base_path" "$COPY_SCRIPT"
+assert_file_eq "$expected_file" "$out_file" "copy-to-clipboard should preserve trailing newline from stdin"
 
 echo "copy_to_clipboard_test: ok"

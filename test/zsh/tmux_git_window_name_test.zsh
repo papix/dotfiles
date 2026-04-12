@@ -184,7 +184,7 @@ tmux-git-window-name
 set -u
 assert_eq "" "$(cat "${tmux_log}")" "should not rename when TMUX is not set"
 
-# 期待: window内pane順でrepo名を重複排除し / 連結で表示する
+# 期待: window内pane順でrepo名を重複排除し ` | ` 連結で表示する
 export TMUX="session:1.1"
 export TMUX_PANE="%3"
 set_git_repo_map \
@@ -195,7 +195,7 @@ cd "${repo_one}"
 : > "${tmux_log}"
 tmux-git-window-name
 rename_with_target_log="$(cat "${tmux_log}")"
-assert_contains "rename-window -t %3 repo-one/repo-two" "${rename_with_target_log}" "should aggregate unique repos in pane order"
+assert_contains "rename-window -t %3 repo-one | repo-two" "${rename_with_target_log}" "should aggregate unique repos in pane order"
 assert_occurrences "repo-one" "${rename_with_target_log}" "1" "should deduplicate same repository name"
 
 # 期待: pane指定のlist-panesが失敗してもwindow_id解決で集約できる
@@ -212,7 +212,7 @@ cd "${repo_one}"
 : > "${tmux_log}"
 tmux-git-window-name
 window_id_retry_log="$(cat "${tmux_log}")"
-assert_contains "rename-window -t %11 repo-one/repo-two" "${window_id_retry_log}" "should resolve window target from pane target when list-panes with pane target fails"
+assert_contains "rename-window -t %11 repo-one | repo-two" "${window_id_retry_log}" "should resolve window target from pane target when list-panes with pane target fails"
 unset TMUX_LIST_PANES_FAIL_TARGET
 unset TMUX_LIST_PANES_ONLY_TARGET
 unset TMUX_DISPLAY_MESSAGE_WINDOW_ID
@@ -262,7 +262,7 @@ cd "${HOME}/.ghq/github.com/papix/dotfiles"
 : > "${tmux_log}"
 tmux-git-window-name
 multi_ghq_log="$(cat "${tmux_log}")"
-assert_contains "rename-window -t %6 "$(printf '\uf408')" papix/dotfiles/"$(printf '\uf408')" example-owner/example-repo" "${multi_ghq_log}" "should use the generic GitHub label when aggregating ghq repositories"
+assert_contains "rename-window -t %6 "$(printf '\uf408')" papix/dotfiles | "$(printf '\uf408')" example-owner/example-repo" "${multi_ghq_log}" "should use the generic GitHub label when aggregating ghq repositories"
 
 # 期待: TMUX_PANEが空ならフォールバックで従来形式を使う
 export TMUX="session:1.5"
