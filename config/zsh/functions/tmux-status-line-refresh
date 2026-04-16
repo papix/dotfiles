@@ -1,0 +1,39 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+session_target="${1:-}"
+client_target="${2:-}"
+typeset -A seen_clients
+typeset -a client_targets
+
+function append_client_target() {
+    local target_client="$1"
+
+    [[ -n "$target_client" ]] || return 0
+    [[ -z "${seen_clients[$target_client]:-}" ]] || return 0
+
+    seen_clients[$target_client]=1
+    client_targets+=("$target_client")
+}
+
+append_client_target "$client_target"
+
+if [[ -n "$session_target" ]]; then
+    while IFS= read -r listed_client; do
+        append_client_target "$listed_client"
+    done < <(tmux list-clients -t "$session_target" -F '#{client_tty}' 2>/dev/null || true)
+fi
+
+if (( ${#client_targets[@]} == 0 )); then
+    while IFS= read -r listed_client; do
+        append_client_target "$listed_client"
+    done < <(tmux list-clients -F '#{client_tty}' 2>/dev/null || true)
+fi
+
+if (( ${#client_targets[@]} == 0 )); then
+    exit 0
+fi
+
+for client_target in "${client_targets[@]}"; do
+    tmux refresh-client -S -t "$client_target" >/dev/null 2>&1 || true
+done
