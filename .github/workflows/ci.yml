@@ -62,4 +62,4 @@ jobs:
         run: bash bin/lint-shell
 
       - name: Check shell formatting
-        run: shfmt -d -i 4 $(git ls-files '*.sh')
+        run: git ls-files '*.sh' | xargs shfmt -d -i 4 --
