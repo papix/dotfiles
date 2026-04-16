@@ -34,4 +34,11 @@ assert_contains '[[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]]' "$LINUX_FILE"
 assert_not_contains 'elif [[ -d "$HOME/.linuxbrew" ]]' "$LINUX_FILE"
 assert_not_contains 'eval "$($HOME/.linuxbrew/bin/brew shellenv)"' "$LINUX_FILE"
 
+# キャッシュ更新は一時ファイル経由で行い、失敗時に既存キャッシュを壊さない
+assert_contains '_dotfiles_brew_cache_tmp="${_dotfiles_brew_cache}.tmp.$$"' "$LINUX_FILE"
+assert_contains 'brew-shellenv-linux' "$LINUX_FILE"
+assert_contains 'mv "$_dotfiles_brew_cache_tmp" "$_dotfiles_brew_cache"' "$LINUX_FILE"
+assert_contains 'rm -f "$_dotfiles_brew_cache_tmp"' "$LINUX_FILE"
+assert_contains '[[ -f "$_dotfiles_brew_cache" ]] && source "$_dotfiles_brew_cache"' "$LINUX_FILE"
+
 echo "linuxbrew_init_policy_test: ok"
