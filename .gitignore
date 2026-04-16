@@ -24,5 +24,10 @@ Thumbs.db
 # Local configuration
 *.local
 
+# Environment files (secrets should never be committed)
+.env
+.env.*
+!.env.example
+
 # Zsh generated files
 config/.zcompdump*
