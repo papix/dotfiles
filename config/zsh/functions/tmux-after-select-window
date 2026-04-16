@@ -1,17 +1,18 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-window_target="${1:-}"
+last_active_pane="${1:-}"
 session_target="${2:-}"
 client_target="${3:-}"
-[[ -n "$window_target" ]] || exit 0
-
 config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
-[[ -f "${config_home}/zsh/functions/tmux-git-window-name" ]] || exit 0
 
-source "${config_home}/zsh/functions/tmux-git-window-name"
-tmux_git_window_name_refresh_window "$window_target" >/dev/null 2>&1 || exit 0
+if [[ -n "$last_active_pane" ]]; then
+    tmux select-pane -t "$last_active_pane" >/dev/null 2>&1 || true
+fi
 
 if [[ -x "${config_home}/zsh/functions/tmux-status-line-refresh" ]]; then
     "${config_home}/zsh/functions/tmux-status-line-refresh" "$session_target" "$client_target"
+    exit 0
 fi
+
+exit 0
