@@ -29,6 +29,10 @@ exit 1
 EOF
 chmod +x "$TMP_BIN/find"
 
+# bash_env.sh と claude_env.sh が source する env-common.sh をテスト用 config に配置
+mkdir -p "$TMP_HOME/.config"
+cp "$ROOT_DIR/config/env-common.sh" "$TMP_HOME/.config/env-common.sh"
+
 assert_contains() {
     local haystack="$1"
     local needle="$2"

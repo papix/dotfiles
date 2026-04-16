@@ -57,6 +57,14 @@ function set_config_file_target() {
             fi
         fi
     else
+        # 宛先が通常ファイルの場合はバックアップしてからリンク
+        if [[ -f "$DEST" && ! -L "$DEST" ]]; then
+            log_warn "Destination is a regular file, backing up: $DEST"
+            if ! mv "$DEST" "$DEST.backup.$(date +%Y%m%d%H%M%S)"; then
+                log_error "Failed to backup file: $DEST"
+                return 1
+            fi
+        fi
         if ln -nfs "$SOURCE" "$DEST" 2>/dev/null; then
             log_info "symbolic link: done"
         else
@@ -292,6 +300,7 @@ function common() {
     mkdir -p "${cache_home}/dotfiles"
     set_config_file "/config/zshrc" "/.zshrc"
     set_config_file "/config/zshenv" "/.zshenv"
+    set_config_file_target "/config/env-common.sh" "${config_home}/env-common.sh"
     set_config_file_target "/config/bash_env.sh" "${config_home}/bash_env.sh"
     set_config_file_target "/config/claude_env.sh" "${config_home}/claude_env.sh"
 
