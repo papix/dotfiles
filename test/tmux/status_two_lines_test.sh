@@ -6,6 +6,7 @@ TMUX_CONF="$ROOT_DIR/config/tmux.conf"
 TMUX_POWERLINE_CONF="$ROOT_DIR/config/tmux-powerline-config.sh"
 TMUX_POWERLINE_THEME="$ROOT_DIR/config/tmux-powerline/themes/custom.sh"
 CPU_USYS_SEGMENT="$ROOT_DIR/config/tmux-powerline/segments/cpu_usys.sh"
+MEM_USED_SEGMENT="$ROOT_DIR/config/tmux-powerline/segments/mem_used.sh"
 DATE_COMPACT_SEGMENT="$ROOT_DIR/config/tmux-powerline/segments/date_compact.sh"
 ITERM_SOLARIZED_PROFILE="$ROOT_DIR/config/iterm2/Solarized-Dark.itermcolors"
 
@@ -202,18 +203,20 @@ assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'tp_print_power
 assert_line_not_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'status-right' "$TMUX_POWERLINE_CONF"
 assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'date_compact 31 255' "$TMUX_POWERLINE_CONF"
 assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'cpu_usys 166 235' "$TMUX_POWERLINE_CONF"
+assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'mem_used 37 235' "$TMUX_POWERLINE_CONF"
 assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' 'git_branch_status 64 235 default_separator no_sep_bg_color no_sep_fg_color no_spacing_disable no_separator_disable' "$TMUX_POWERLINE_CONF"
 
 # 期待: claude usage は下段右に表示する
 assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_RIGHT=' 'claude_usage.sh' "$TMUX_POWERLINE_CONF"
 assert_line_contains 'export TMUX_POWERLINE_STATUS_FORMAT_RIGHT=' 'run_segment' "$TMUX_POWERLINE_CONF"
 
-# 期待: 下段左の順序は date > cpu > branch（branchは下段左の一番右）
+# 期待: 下段左の順序は date > cpu > mem > branch（branchは下段左の一番右）
 assert_line_ordered_contains \
     'export TMUX_POWERLINE_STATUS_FORMAT_LEFT=' \
     "$TMUX_POWERLINE_CONF" \
     'date_compact 31 255' \
     'cpu_usys 166 235' \
+    'mem_used 37 235' \
     'git_branch_status 64 235 default_separator no_sep_bg_color no_sep_fg_color no_spacing_disable no_separator_disable'
 
 # 期待: CPUセグメントは usr/sys のプレフィックス付き
@@ -222,6 +225,12 @@ assert_contains 'usr:' "$CPU_USYS_SEGMENT"
 assert_contains 'sys:' "$CPU_USYS_SEGMENT"
 assert_contains '__format_cpu_pct_fixed_width' "$CPU_USYS_SEGMENT"
 assert_contains 'printf "%4.1f"' "$CPU_USYS_SEGMENT"
+
+# 期待: Memoryセグメントは mem のプレフィックス付き
+assert_contains 'run_segment' "$MEM_USED_SEGMENT"
+assert_contains 'mem:' "$MEM_USED_SEGMENT"
+assert_contains '__format_mem_pct_fixed_width' "$MEM_USED_SEGMENT"
+assert_contains 'printf "%5.1f"' "$MEM_USED_SEGMENT"
 
 # 期待: dateセグメントは曜日+日付+時刻を1セグメントで表示する
 assert_contains 'run_segment' "$DATE_COMPACT_SEGMENT"
