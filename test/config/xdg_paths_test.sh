@@ -22,6 +22,7 @@ zsh_output="$(env -i HOME="$TMP_HOME" PATH="/usr/bin:/bin" zsh -df -c '
     printf "XDG_CACHE_HOME=%s\n" "${XDG_CACHE_HOME:-}"
     printf "XDG_STATE_HOME=%s\n" "${XDG_STATE_HOME:-}"
     printf "HISTFILE=%s\n" "${HISTFILE:-}"
+    printf "HISTDIR=%s\n" "$([[ -d "${HISTFILE:h}" ]] && echo 1 || echo 0)"
     printf "DOTFILES_1PASSWORD_VAULT=%s\n" "${DOTFILES_1PASSWORD_VAULT:-}"
     printf "DOTFILES_1PASSWORD_ITEM=%s\n" "${DOTFILES_1PASSWORD_ITEM:-}"
     printf "PATH=%s\n" "$PATH"
@@ -30,6 +31,7 @@ zsh_output="$(env -i HOME="$TMP_HOME" PATH="/usr/bin:/bin" zsh -df -c '
 assert_contains "$zsh_output" "XDG_CACHE_HOME=$TMP_HOME/.cache" "zshenv should set XDG_CACHE_HOME"
 assert_contains "$zsh_output" "XDG_STATE_HOME=$TMP_HOME/.local/state" "zshenv should set XDG_STATE_HOME"
 assert_contains "$zsh_output" "HISTFILE=$TMP_HOME/.local/state/zsh/history" "zshenv should move HISTFILE under XDG_STATE_HOME"
+assert_contains "$zsh_output" "HISTDIR=1" "zshenv should create the zsh history directory"
 assert_contains "$zsh_output" 'DOTFILES_1PASSWORD_VAULT=dotfiles' 'zshenv should set default 1Password vault'
 assert_contains "$zsh_output" 'DOTFILES_1PASSWORD_ITEM=shared-env' 'zshenv should set default 1Password item'
 assert_contains "$zsh_output" "$TMP_HOME/.local/bin" "zshenv should add local bin"
@@ -58,9 +60,11 @@ zsh_local_output="$(env -i HOME="$TMP_HOME_WITH_LOCAL" PATH="/usr/bin:/bin" zsh 
     source "$1"
     printf "XDG_STATE_HOME=%s\n" "${XDG_STATE_HOME:-}"
     printf "HISTFILE=%s\n" "${HISTFILE:-}"
+    printf "HISTDIR=%s\n" "$([[ -d "${HISTFILE:h}" ]] && echo 1 || echo 0)"
 ' zsh "$ROOT_DIR/config/zshenv")"
 
 assert_contains "$zsh_local_output" "XDG_STATE_HOME=$TMP_HOME_WITH_LOCAL/custom-state" "zshenv should honor XDG_STATE_HOME from .zshenv.local"
 assert_contains "$zsh_local_output" "HISTFILE=$TMP_HOME_WITH_LOCAL/custom-state/zsh/history" "zshenv should recompute HISTFILE after loading .zshenv.local"
+assert_contains "$zsh_local_output" "HISTDIR=1" "zshenv should create the overridden history directory"
 
 echo "xdg_paths_test: ok"

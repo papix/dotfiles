@@ -55,6 +55,11 @@ fi
 # ~/.zshenv.local で XDG_STATE_HOME を上書きした場合も履歴保存先を追従させる
 export HISTFILE="${XDG_STATE_HOME}/zsh/history"
 
+# 履歴保存先は起動時に確実に用意しておく
+if [[ ! -d "${HISTFILE:h}" ]]; then
+    mkdir -p "${HISTFILE:h}" 2>/dev/null || true
+fi
+
 # Claude Code
 export DISABLE_TELEMETRY=true
 export DISABLE_ERROR_REPORTING=true
@@ -147,9 +152,13 @@ fi
 
 if [[ -f "/proc/version" ]] && grep -q -i "microsoft" /proc/version; then
     # WSL2 の場合
-    # XXX: 何故か WSL_DISTRO_NAME が反映されていないことがある。WSL2で動いている場合は「Ubuntu」をセットしておく
-    export WSL_DISTRO_NAME=Ubuntu
-    # XXX: 何故か ~/.vscode-server/bin へのパスが通っていて、Windows側の code が使えないときがあるので、 ~/.vscode-server/bin のパスを消す
+    # WSL_DISTRO_NAME が未設定の場合は /etc/os-release から取得する
+    # （Ubuntu 以外の WSL ディストリビューションでも動作するよう汎用化）
+    if [[ -z "${WSL_DISTRO_NAME:-}" && -f /etc/os-release ]]; then
+        WSL_DISTRO_NAME="$(. /etc/os-release 2>/dev/null && printf '%s' "${NAME:-}")"
+        [[ -n "$WSL_DISTRO_NAME" ]] && export WSL_DISTRO_NAME
+    fi
+    # ~/.vscode-server/bin へのパスが通っていると Windows 側の code が使えないため削除する
     # pathを配列として扱い、重複を防ぐ
     path=(${path:#*/.vscode-server/bin/*})
     typeset -gx -U path

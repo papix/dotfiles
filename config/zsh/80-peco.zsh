@@ -8,15 +8,17 @@ if [[ -t 0 ]]; then
     stty stop undef
 fi
 
+function __dotfiles_history_candidates() {
+    fc -rnl 1 2>/dev/null || true
+}
+
 # pecoで履歴を検索
 function peco-history() {
-    if command -v tac >/dev/null 2>&1; then
-        BUFFER=$(history -n 1 | tac | peco --prompt 'HISTORY >' | head -n 1)
-    elif command -v tail >/dev/null 2>&1 && tail -r /dev/null >/dev/null 2>&1; then
-        BUFFER=$(history -n 1 | tail -r | peco --prompt 'HISTORY >' | head -n 1)
-    else
-        BUFFER=$(history -n 1 | awk '{a[NR]=$0} END{for(i=NR;i>=1;i--)print a[i]}' | peco --prompt 'HISTORY >' | head -n 1)
-    fi
+    local selected_command
+    selected_command="$(__dotfiles_history_candidates | peco --prompt 'HISTORY >' | head -n 1)"
+    [[ -n "${selected_command}" ]] || return 0
+
+    BUFFER="${selected_command}"
     CURSOR="${#BUFFER}"
     zle clear-screen
 }
