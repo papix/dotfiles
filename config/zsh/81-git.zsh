@@ -37,9 +37,64 @@ function git-default-branch() {
     echo "main"
 }
 
-# ブランチに切り替え
+# ブランチに切り替え（worktree対応・サブディレクトリ維持）
 # 使用法: git-switch-branch <branch-name>
 # 戻り値: 成功時0、失敗時1
+# 出力: worktree移動時は移動先パスを出力
+function __git_branch_worktree_path() {
+    local branch="$1"
+    local wt_info
+    wt_info=$(git worktree list --porcelain 2>/dev/null)
+    local wt_path=""
+    local line=""
+    while IFS= read -r line; do
+        case "${line}" in
+            "worktree "*)
+                wt_path="${line#worktree }"
+                ;;
+            "branch refs/heads/${branch}")
+                echo "${wt_path}"
+                return 0
+                ;;
+            "")
+                wt_path=""
+                ;;
+        esac
+    done <<< "${wt_info}"
+}
+
+function __git_target_path_for_worktree() {
+    local worktree_path="$1"
+    local repo_prefix
+    repo_prefix=$(git rev-parse --show-prefix 2>/dev/null) || return 1
+
+    local trimmed_worktree_path="${worktree_path%/}"
+    if [[ -n "${repo_prefix}" ]]; then
+        local target_path="${trimmed_worktree_path}/${repo_prefix%/}"
+        if [[ -d "${target_path}" ]]; then
+            echo "${target_path}"
+            return 0
+        fi
+    fi
+
+    if [[ -n "${trimmed_worktree_path}" ]]; then
+        echo "${trimmed_worktree_path}"
+        return 0
+    fi
+
+    echo "${worktree_path}"
+}
+
+function __git_branch_target_path() {
+    local branch="$1"
+    local worktree_path
+    worktree_path="$(__git_branch_worktree_path "${branch}")"
+
+    if [[ -n "${worktree_path}" && -d "${worktree_path}" ]]; then
+        __git_target_path_for_worktree "${worktree_path}"
+    fi
+}
+
 function git-switch-branch() {
     local branch="${1:-}"
     if [[ -z "${branch}" ]]; then
@@ -47,7 +102,18 @@ function git-switch-branch() {
         return 1
     fi
 
-    git checkout "${branch}"
+    local target_path
+    target_path="$(__git_branch_target_path "${branch}")"
+
+    if [[ -n "${target_path}" ]]; then
+        # 別のworktreeでチェックアウト済み → そのディレクトリに移動
+        # 現在のサブディレクトリを維持する
+        echo "${target_path}"
+        builtin cd -- "${target_path}"
+    else
+        # 通常のチェックアウト
+        git checkout "${branch}"
+    fi
 }
 
 # main/masterブランチにチェックアウト
@@ -64,38 +130,96 @@ function git-delete-branch() {
         current=$(git symbolic-ref --short HEAD 2>/dev/null)
         local confirm
         local branch
+        local branch_info
         local merged_info
+        local worktree=""
+        local worktree_info
+        local wt_branch=""
+        local wt_path=""
+        local line=""
         local -a deletable=()
+        local -a force_deletable=()
         local -a merged_branches=()
 
+        # 1. prune前にステールworktreeのブランチを収集
+        worktree_info=$(git worktree list --porcelain 2>/dev/null)
+        while IFS= read -r line; do
+            case "${line}" in
+                "worktree "*)
+                    wt_path="${line#worktree }"
+                    ;;
+                "branch "*)
+                    wt_branch="${line#branch refs/heads/}"
+                    if [[ -n "${wt_path}" && -n "${wt_branch}" && ! -d "${wt_path}" ]]; then
+                        if [[ "${wt_branch}" != "${default}" && "${wt_branch}" != "${current}" ]]; then
+                            if (( ! ${force_deletable[(Ie)${wt_branch}]} )); then
+                                force_deletable+=("${wt_branch}")
+                            fi
+                        fi
+                    fi
+                    wt_path=""
+                    wt_branch=""
+                    ;;
+                "")
+                    wt_path=""
+                    wt_branch=""
+                    ;;
+            esac
+        done <<< "${worktree_info}"
+
+        # 2. ステールworktreeメタデータを掃除
+        git worktree prune 2>/dev/null
+
+        # 3. マージ済みブランチを収集
         merged_info="$(git for-each-ref --format='%(refname:short)' --merged "${default}" refs/heads 2>/dev/null)"
         merged_branches=("${(@f)merged_info}")
+        branch_info="$(git for-each-ref --format=$'%(refname:short)\t%(worktreepath)' refs/heads 2>/dev/null)"
 
-        for branch in "${merged_branches[@]}"; do
-            if [[ -z "${branch}" || "${branch}" == "${default}" || "${branch}" == "${current}" ]]; then
+        while IFS=$'\t' read -r branch worktree; do
+            if [[ -z "${branch}" ]]; then
                 continue
             fi
-            deletable+=("${branch}")
-        done
+            if [[ "${branch}" == "${default}" || "${branch}" == "${current}" ]]; then
+                continue
+            fi
+            if (( ${force_deletable[(Ie)${branch}]} )); then
+                continue
+            fi
+            if [[ -z "${worktree}" ]]; then
+                if (( ${merged_branches[(Ie)${branch}]} )); then
+                    deletable+=("${branch}")
+                fi
+            fi
+        done <<< "${branch_info}"
 
-        if (( ${#deletable[@]} == 0 )); then
+        if (( ${#deletable[@]} == 0 && ${#force_deletable[@]} == 0 )); then
             echo "No branches to delete."
             return 0
         fi
 
-        echo "Merged branches to delete (-d):"
-        printf "  %s
-" "${deletable[@]}"
+        if (( ${#deletable[@]} > 0 )); then
+            echo "Merged branches to delete (-d):"
+            printf "  %s\n" "${deletable[@]}"
+        fi
+        if (( ${#force_deletable[@]} > 0 )); then
+            echo "Stale worktree branches to delete (-D):"
+            printf "  %s\n" "${force_deletable[@]}"
+        fi
 
         echo ""
         echo -n "Delete these branches? [y/N]: "
-        read -r confirm
+        read -r confirm < /dev/tty
         if [[ "${confirm}" != [yY] ]]; then
             echo "Aborted."
             return 1
         fi
 
-        git branch -d "${deletable[@]}"
+        if (( ${#deletable[@]} > 0 )); then
+            git branch -d "${deletable[@]}"
+        fi
+        if (( ${#force_deletable[@]} > 0 )); then
+            git branch -D "${force_deletable[@]}"
+        fi
     )
 }
 
@@ -124,16 +248,28 @@ function peco-branch() {
             BUFFER="${cmd} ${selected_branch}"
             CURSOR="${#BUFFER}"
         else
-            local checkout_output
-            checkout_output=$(git checkout "${selected_branch}" 2>&1)
-            local exit_code=$?
+            local target_path
+            target_path="$(__git_branch_target_path "${selected_branch}")"
 
-            if [[ ${exit_code} -eq 0 ]]; then
-                zle reset-prompt
+            if [[ -n "${target_path}" ]]; then
+                if builtin cd -- "${target_path}"; then
+                    zle reset-prompt
+                else
+                    zle -M "Failed to change directory: ${target_path}"
+                    zle reset-prompt
+                fi
             else
-                # 失敗時はステータスラインにエラーを表示
-                zle -M "${checkout_output}"
-                zle reset-prompt
+                local checkout_output
+                checkout_output=$(git checkout "${selected_branch}" 2>&1)
+                local exit_code=$?
+
+                if [[ ${exit_code} -eq 0 ]]; then
+                    zle reset-prompt
+                else
+                    # 失敗時はステータスラインにエラーを表示
+                    zle -M "${checkout_output}"
+                    zle reset-prompt
+                fi
             fi
         fi
     fi
@@ -169,7 +305,7 @@ function peco-difit() {
     local difit_args=($(printf "%s\n" "$selected_commit" | tr '\n' ' '))
     if [[ -n "${selected_commit}" ]]; then
         printf "%s\n" "$selected"
-        npx difit --port 1111 $difit_args
+        npx difit --port 1111 "${difit_args[@]}"
     fi
 }
 alias pifit='peco-difit'
@@ -192,7 +328,7 @@ function peco-delete-branch() {
         echo "  - ${branch}"
     done
     echo -n "Are you sure? [y/N] "
-    read -r confirm
+    read -r confirm < /dev/tty
     if [[ "${confirm}" != [yY] ]]; then
         echo "Cancelled" >&2
         return
