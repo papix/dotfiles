@@ -5,7 +5,7 @@
 # 依存: 00-init.zsh (COMMAND_CACHEのため)
 
 # tmux内での追加設定
-if [[ -n "${TMUX:-}" ]]; then
+function __dotfiles_setup_tmux_hooks() {
     local config_home
     config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
 
@@ -28,7 +28,12 @@ if [[ -n "${TMUX:-}" ]]; then
         # 初回読み込み時に実行
         tmux-git-window-name
     fi
+}
+
+if [[ -n "${TMUX:-}" ]]; then
+    __dotfiles_setup_tmux_hooks
 fi
+unfunction __dotfiles_setup_tmux_hooks
 
 function current-workspace() {
     local pwd=$(pwd)
@@ -155,4 +160,3 @@ if [[ -n "${PS1:-}" ]] && [[ -z "${TMUX:-}" ]] && type tmux >/dev/null 2>&1; the
         fi
     }
 fi
-

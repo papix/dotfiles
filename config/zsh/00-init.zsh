@@ -22,24 +22,30 @@ fi
 
 # パフォーマンス向上のためのコマンド存在キャッシュ
 typeset -gA COMMAND_CACHE
-local commands_to_check=(
-    # パッケージマネージャーと環境ツール
-    brew mise direnv
-    # シェルユーティリティ
-    gls gsed
-    # ドキュメントと表示
-    cpandoc tldr colordiff
-    # バージョン管理と開発
-    tmux peco ag gh op
-    # エディタ
-    nvim
-)
+function __dotfiles_prime_command_cache() {
+    local commands_to_check=(
+        # パッケージマネージャーと環境ツール
+        brew mise direnv
+        # シェルユーティリティ
+        gls gsed
+        # ドキュメントと表示
+        cpandoc tldr colordiff
+        # バージョン管理と開発
+        tmux peco ag gh op
+        # エディタ
+        nvim
+    )
 
-for cmd in $commands_to_check; do
-    if type $cmd > /dev/null 2>&1; then
-        COMMAND_CACHE[$cmd]=1
-    fi
-done
+    local cmd
+    for cmd in $commands_to_check; do
+        if type "$cmd" > /dev/null 2>&1; then
+            COMMAND_CACHE[$cmd]=1
+        fi
+    done
+}
+
+__dotfiles_prime_command_cache
+unfunction __dotfiles_prime_command_cache
 
 # 互換用: ローカル環境で ~/.zshrc.alias が存在する場合のみ従来設定を読み込む
 if [[ -f "${HOME}/.zshrc.alias" ]]; then

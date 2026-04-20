@@ -11,29 +11,57 @@ fi
 
 # direnv
 if [[ -n "$COMMAND_CACHE[direnv]" ]]; then
-    eval "$(direnv hook zsh)"
+    function __dotfiles_direnv_export() {
+        local direnv_exports=""
+
+        # ネストしたシェル起動時に出る unloading ノイズだけを抑制し、
+        # それ以外の direnv メッセージはそのまま表示する
+        direnv_exports="$(direnv export zsh 2> >(grep -Fvx 'direnv: unloading' >&2))" || return 1
+        eval "$direnv_exports"
+    }
+
+    function __dotfiles_direnv_hook() {
+        trap -- '' SIGINT
+        __dotfiles_direnv_export || true
+        trap - SIGINT
+    }
+
+    typeset -ag precmd_functions
+    if (( ! ${precmd_functions[(I)__dotfiles_direnv_hook]} )); then
+        precmd_functions=(__dotfiles_direnv_hook $precmd_functions)
+    fi
+
+    typeset -ag chpwd_functions
+    if (( ! ${chpwd_functions[(I)__dotfiles_direnv_hook]} )); then
+        chpwd_functions=(__dotfiles_direnv_hook $chpwd_functions)
+    fi
 fi
 
 # Homebrew補完
-local zsh_completion_dir
-zsh_completion_dir="${${(%):-%x}:A:h}/completions"
-typeset -gx -U fpath
-fpath=(
-    ${zsh_completion_dir}(N-/)
-    ${fpath}
-)
+function __dotfiles_prepend_completion_fpath() {
+    local zsh_completion_dir
+    zsh_completion_dir="${${(%):-%x}:A:h}/completions"
+    typeset -gx -U fpath
+    fpath=(
+        ${zsh_completion_dir}(N-/)
+        ${fpath}
+    )
 
-if [[ -n "$COMMAND_CACHE[brew]" ]]; then
-    local brew_prefix
-    brew_prefix="$(brew --prefix 2>/dev/null || true)"
-    if [[ -n "$brew_prefix" ]]; then
-        fpath=(
-            ${brew_prefix}/share/zsh/site-functions(N-/)
-            ${brew_prefix}/share/zsh-completions(N-/)
-            ${fpath}
-        )
+    if [[ -n "$COMMAND_CACHE[brew]" ]]; then
+        local brew_prefix
+        brew_prefix="$(brew --prefix 2>/dev/null || true)"
+        if [[ -n "$brew_prefix" ]]; then
+            fpath=(
+                ${brew_prefix}/share/zsh/site-functions(N-/)
+                ${brew_prefix}/share/zsh-completions(N-/)
+                ${fpath}
+            )
+        fi
     fi
-fi
+}
+
+__dotfiles_prepend_completion_fpath
+unfunction __dotfiles_prepend_completion_fpath
 
 # BASH_ENV 設定（非インタラクティブ bash 用）
 if [[ -z "$BASH_ENV" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/bash_env.sh" ]]; then
