@@ -15,11 +15,18 @@ if [[ -n "$COMMAND_CACHE[direnv]" ]]; then
 fi
 
 # Homebrew補完
+local zsh_completion_dir
+zsh_completion_dir="${${(%):-%x}:A:h}/completions"
+typeset -gx -U fpath
+fpath=(
+    ${zsh_completion_dir}(N-/)
+    ${fpath}
+)
+
 if [[ -n "$COMMAND_CACHE[brew]" ]]; then
     local brew_prefix
     brew_prefix="$(brew --prefix 2>/dev/null || true)"
     if [[ -n "$brew_prefix" ]]; then
-        typeset -gx -U fpath
         fpath=(
             ${brew_prefix}/share/zsh/site-functions(N-/)
             ${brew_prefix}/share/zsh-completions(N-/)

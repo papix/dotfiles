@@ -3,12 +3,18 @@
 # 補完設定
 ########################################
 
+zmodload zsh/complist
 autoload -Uz compinit
 
 typeset -g ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+typeset -g ZSH_COMPLETION_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompcache"
 if [[ ! -d "${ZSH_COMPDUMP:h}" ]]; then
     mkdir -p "${ZSH_COMPDUMP:h}" 2>/dev/null
 fi
+if [[ ! -d "${ZSH_COMPLETION_CACHE_DIR}" ]]; then
+    mkdir -p "${ZSH_COMPLETION_CACHE_DIR}" 2>/dev/null
+fi
+# compinit 自身が dump を再利用しつつ、completion ファイル数の変化は検知して再生成する。
 compinit -d "${ZSH_COMPDUMP}"
 
 # 補完オプション
@@ -27,6 +33,8 @@ zstyle ':completion:*:default' menu select
 zstyle ':completion:*' list-separator '=>'
 zstyle ':completion:*:manuals' separate-sections true
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${ZSH_COMPLETION_CACHE_DIR}"
 zstyle ':completion:*:cd:*' ignore-parents parent pwd
 zstyle ':completion:*' list-colors 'di=34' 'ln=35' 'so=32' 'ex=31' 'bd=46;34' 'cd=43;34'
 
