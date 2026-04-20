@@ -1,0 +1,202 @@
+#compdef codex
+
+# codex の公式補完は version ごとにキャッシュし、古い cache があれば先に使って裏で更新する
+typeset -gi __DOTFILES_CODEX_COMPLETION_READY=0
+
+function __dotfiles_codex_completion_cache_dir() {
+    local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+
+    if [[ "$cache_home" != /* ]]; then
+        cache_home="$HOME/.cache"
+    fi
+
+    print -r -- "${cache_home}/zsh/completions"
+}
+
+function __dotfiles_codex_completion_path_is_safe() {
+    local target_path="$1"
+
+    [[ -n "$target_path" && "$target_path" == /* ]]
+}
+
+function __dotfiles_codex_completion_cache_file() {
+    local cache_dir=""
+
+    cache_dir="$(__dotfiles_codex_completion_cache_dir)" || return 1
+    __dotfiles_codex_completion_path_is_safe "$cache_dir" || return 1
+
+    print -r -- "${cache_dir}/_codex.generated.zsh"
+}
+
+function __dotfiles_codex_completion_version_file() {
+    local cache_dir=""
+
+    cache_dir="$(__dotfiles_codex_completion_cache_dir)" || return 1
+    __dotfiles_codex_completion_path_is_safe "$cache_dir" || return 1
+
+    print -r -- "${cache_dir}/codex.version"
+}
+
+function __dotfiles_codex_completion_lock_dir() {
+    local cache_dir=""
+
+    cache_dir="$(__dotfiles_codex_completion_cache_dir)" || return 1
+    __dotfiles_codex_completion_path_is_safe "$cache_dir" || return 1
+
+    print -r -- "${cache_dir}/codex.lock"
+}
+
+function __dotfiles_codex_current_version() {
+    codex --version 2>/dev/null
+}
+
+function __dotfiles_codex_completion_cache_exists() {
+    local completion_file=""
+
+    completion_file="$(__dotfiles_codex_completion_cache_file)" || return 1
+    [[ -r "$completion_file" ]]
+}
+
+function __dotfiles_codex_completion_cache_is_current() {
+    local current_version="$1"
+    local version_file=""
+
+    version_file="$(__dotfiles_codex_completion_version_file)" || return 1
+    [[ -n "$current_version" && -r "$version_file" && "$(<"$version_file")" == "$current_version" ]]
+}
+
+function __dotfiles_load_codex_completion_cache() {
+    local completion_file=""
+
+    completion_file="$(__dotfiles_codex_completion_cache_file)" || return 1
+    [[ -r "$completion_file" ]] || return 1
+
+    source "$completion_file" 2>/dev/null || return 1
+    (( $+functions[__dotfiles_generated_codex_completion] )) || return 1
+    return 0
+}
+
+function __dotfiles_generate_codex_completion_cache() {
+    local current_version="$1"
+    local cache_dir="" completion_file="" tmp_file="" tmp_raw_file="" version_file=""
+
+    [[ -n "$current_version" ]] || return 1
+
+    cache_dir="$(__dotfiles_codex_completion_cache_dir)" || return 1
+    completion_file="$(__dotfiles_codex_completion_cache_file)" || return 1
+    version_file="$(__dotfiles_codex_completion_version_file)" || return 1
+    __dotfiles_codex_completion_path_is_safe "$cache_dir" || return 1
+    __dotfiles_codex_completion_path_is_safe "$completion_file" || return 1
+    __dotfiles_codex_completion_path_is_safe "$version_file" || return 1
+
+    mkdir -p "$cache_dir" 2>/dev/null || return 1
+    tmp_raw_file="${completion_file}.raw.$$"
+    tmp_file="${completion_file}.tmp.$$"
+
+    if ! codex completion zsh >| "$tmp_raw_file" 2>/dev/null; then
+        command rm -f "$tmp_raw_file" "$tmp_file" 2>/dev/null || true
+        return 1
+    fi
+
+    if ! command sed 's/^_codex() {$/__dotfiles_generated_codex_completion() {/' "$tmp_raw_file" >| "$tmp_file"; then
+        command rm -f "$tmp_raw_file" "$tmp_file" 2>/dev/null || true
+        return 1
+    fi
+
+    if ! command mv -f "$tmp_file" "$completion_file"; then
+        command rm -f "$tmp_raw_file" "$tmp_file" 2>/dev/null || true
+        return 1
+    fi
+
+    print -r -- "$current_version" >| "$version_file"
+    command rm -f "$tmp_raw_file" 2>/dev/null || true
+    return 0
+}
+
+function __dotfiles_codex_acquire_completion_lock() {
+    local cache_dir="" lock_dir=""
+
+    cache_dir="$(__dotfiles_codex_completion_cache_dir)" || return 1
+    lock_dir="$(__dotfiles_codex_completion_lock_dir)" || return 1
+    __dotfiles_codex_completion_path_is_safe "$cache_dir" || return 1
+    __dotfiles_codex_completion_path_is_safe "$lock_dir" || return 1
+
+    command mkdir -p "$cache_dir" 2>/dev/null || return 1
+    command mkdir "$lock_dir" 2>/dev/null
+}
+
+function __dotfiles_codex_release_completion_lock() {
+    local lock_dir=""
+
+    lock_dir="$(__dotfiles_codex_completion_lock_dir)" || return 0
+    __dotfiles_codex_completion_path_is_safe "$lock_dir" || return 0
+
+    command rmdir "$lock_dir" 2>/dev/null || true
+}
+
+function __dotfiles_maybe_refresh_codex_completion_async() {
+    local current_version=""
+
+    (( $+commands[codex] )) || return 1
+
+    current_version="$(__dotfiles_codex_current_version)" || return 1
+    if __dotfiles_codex_completion_cache_exists && __dotfiles_codex_completion_cache_is_current "$current_version"; then
+        return 0
+    fi
+
+    if ! __dotfiles_codex_acquire_completion_lock; then
+        return 0
+    fi
+
+    (
+        __dotfiles_generate_codex_completion_cache "$current_version"
+        __dotfiles_codex_release_completion_lock
+    ) >/dev/null 2>&1 &!
+    return 0
+}
+
+function __dotfiles_prepare_codex_completion() {
+    local current_version=""
+
+    if (( $+functions[__dotfiles_generated_codex_completion] )); then
+        return 0
+    fi
+
+    (( $+commands[codex] )) || return 1
+
+    if __dotfiles_codex_completion_cache_exists && __dotfiles_load_codex_completion_cache; then
+        current_version="$(__dotfiles_codex_current_version 2>/dev/null || true)"
+        if [[ -n "$current_version" ]] && ! __dotfiles_codex_completion_cache_is_current "$current_version"; then
+            __dotfiles_maybe_refresh_codex_completion_async || true
+        fi
+        return 0
+    fi
+
+    current_version="$(__dotfiles_codex_current_version)" || return 1
+    if __dotfiles_codex_acquire_completion_lock; then
+        if __dotfiles_generate_codex_completion_cache "$current_version"; then
+            __dotfiles_codex_release_completion_lock
+            __dotfiles_load_codex_completion_cache || return 1
+            return 0
+        fi
+        __dotfiles_codex_release_completion_lock
+    fi
+
+    return 1
+}
+
+function _codex() {
+    if (( __DOTFILES_CODEX_COMPLETION_READY )) && (( $+functions[__dotfiles_generated_codex_completion] )); then
+        __dotfiles_generated_codex_completion "$@"
+        return $?
+    fi
+
+    if __dotfiles_prepare_codex_completion; then
+        __DOTFILES_CODEX_COMPLETION_READY=1
+        __dotfiles_generated_codex_completion "$@"
+        return $?
+    fi
+
+    autoload -Uz _gnu_generic
+    _gnu_generic "$@"
+}

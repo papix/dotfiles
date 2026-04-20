@@ -15,9 +15,13 @@ assert_contains() {
 }
 
 # 期待: compinit は dumpfile を指定して初期化する
+assert_contains 'zmodload zsh/complist' "$COMPLETION_FILE"
 assert_contains 'autoload -Uz compinit' "$COMPLETION_FILE"
 assert_contains 'compinit -d "${ZSH_COMPDUMP}"' "$COMPLETION_FILE"
 assert_contains 'typeset -g ZSH_COMPDUMP=' "$COMPLETION_FILE"
+assert_contains 'typeset -g ZSH_COMPLETION_CACHE_DIR=' "$COMPLETION_FILE"
+assert_contains "zstyle ':completion:*' use-cache on" "$COMPLETION_FILE"
+assert_contains "zstyle ':completion:*' cache-path \"\${ZSH_COMPLETION_CACHE_DIR}\"" "$COMPLETION_FILE"
 
 # 期待: 履歴オプションを強化する
 assert_contains 'setopt share_history' "$OPTIONS_FILE"

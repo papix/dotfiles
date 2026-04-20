@@ -1,0 +1,480 @@
+#compdef claude
+
+typeset -ga __DOTFILES_CLAUDE_PARSED_COMMANDS
+typeset -ga __DOTFILES_CLAUDE_PARSED_OPTION_SPECS
+
+function __dotfiles_claude_completion_cache_dir() {
+    local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+
+    if [[ "$cache_home" != /* ]]; then
+        cache_home="$HOME/.cache"
+    fi
+
+    print -r -- "${cache_home}/zsh/completions"
+}
+
+function __dotfiles_claude_completion_path_is_safe() {
+    local target_path="$1"
+
+    [[ -n "$target_path" && "$target_path" == /* ]]
+}
+
+function __dotfiles_claude_scope_version_file() {
+    local prefix=""
+
+    prefix="$(__dotfiles_claude_scope_cache_prefix "$@")" || return 1
+    __dotfiles_claude_completion_path_is_safe "$prefix" || return 1
+
+    print -r -- "${prefix}.version"
+}
+
+function __dotfiles_claude_version() {
+    local version_output
+
+    version_output="$(claude --version 2>/dev/null || claude -v 2>/dev/null)" || return 1
+    [[ -n "$version_output" ]] || return 1
+    print -r -- "$version_output"
+}
+
+function __dotfiles_claude_scope_key() {
+    local scope_key
+
+    if (( $# == 0 )); then
+        print -r -- root
+        return 0
+    fi
+
+    scope_key="${(j:__:)@}"
+    scope_key="${scope_key//[^A-Za-z0-9_-]/_}"
+    print -r -- "$scope_key"
+}
+
+function __dotfiles_claude_scope_cache_prefix() {
+    local cache_dir="" scope_key=""
+
+    scope_key="$(__dotfiles_claude_scope_key "$@")"
+    cache_dir="$(__dotfiles_claude_completion_cache_dir)" || return 1
+    __dotfiles_claude_completion_path_is_safe "$cache_dir" || return 1
+
+    print -r -- "${cache_dir}/claude.${scope_key}"
+}
+
+function __dotfiles_claude_scope_lock_dir() {
+    local prefix=""
+
+    prefix="$(__dotfiles_claude_scope_cache_prefix "$@")" || return 1
+    __dotfiles_claude_completion_path_is_safe "$prefix" || return 1
+
+    print -r -- "${prefix}.lock"
+}
+
+function __dotfiles_claude_trim() {
+    local value="$1"
+
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    print -r -- "$value"
+}
+
+function __dotfiles_claude_escape_spec_text() {
+    local value="$1"
+
+    value="${value//\\/\\\\}"
+    value="${value//:/\\:}"
+    value="${value//\[/\\[}"
+    value="${value//\]/\\]}"
+    print -r -- "$value"
+}
+
+function __dotfiles_claude_choice_action() {
+    local description="$1"
+    local choice_blob=""
+
+    [[ "$description" == *'(choices:'*')'* ]] || return 1
+
+    choice_blob="${description#*'(choices: '}"
+    choice_blob="${choice_blob%%)*}"
+    choice_blob="${choice_blob//\"/}"
+    choice_blob="${choice_blob//,/ }"
+    choice_blob="$(__dotfiles_claude_trim "$choice_blob")"
+    [[ -n "$choice_blob" ]] || return 1
+
+    print -r -- "(${choice_blob})"
+}
+
+function __dotfiles_claude_option_action() {
+    local arg_token="$1"
+    local description="$2"
+    local action="_default"
+    local arg_name=""
+    local choice_action=""
+    local lowered_arg_name=""
+
+    arg_name="$arg_token"
+    arg_name="${arg_name#<}"
+    arg_name="${arg_name#\[}"
+    arg_name="${arg_name%>}"
+    arg_name="${arg_name%\]}"
+    arg_name="${arg_name%...}"
+    [[ -n "$arg_name" ]] || arg_name=value
+
+    choice_action="$(__dotfiles_claude_choice_action "$description" 2>/dev/null || true)"
+    if [[ -n "$choice_action" ]]; then
+        print -r -- ":$(__dotfiles_claude_escape_spec_text "$arg_name"):${choice_action}"
+        return 0
+    fi
+
+    lowered_arg_name="${arg_name:l}"
+    case "$lowered_arg_name" in
+    dir|dirs|directory|directories)
+        action='_files -/'
+        ;;
+    file|files|path|paths|json|schema|config|configs|setting|settings)
+        action='_files'
+        ;;
+    *)
+        action='_default'
+        ;;
+    esac
+
+    print -r -- ":$(__dotfiles_claude_escape_spec_text "$arg_name"):${action}"
+}
+
+function __dotfiles_claude_collect_section_entries() {
+    local target_section="$1"
+    local help_output="$2"
+    local entry_desc=""
+    local entry_prefix=""
+    local in_section=0
+    local line trimmed
+
+    while IFS= read -r line; do
+        if (( ! in_section )); then
+            if [[ "$line" == "${target_section}:" ]]; then
+                in_section=1
+            fi
+            continue
+        fi
+
+        if [[ "$line" == [A-Z]*: ]]; then
+            break
+        fi
+
+        if [[ "$target_section" == 'Commands' && "$line" == '  Examples:'* ]]; then
+            break
+        fi
+
+        if [[ -z "$line" ]]; then
+            if [[ -n "$entry_prefix" ]]; then
+                print -r -- "${entry_prefix}	${entry_desc}"
+                entry_prefix=""
+                entry_desc=""
+            fi
+            continue
+        fi
+
+        trimmed="$(__dotfiles_claude_trim "$line")"
+        if [[ -z "$trimmed" ]]; then
+            continue
+        fi
+
+        if [[ "$target_section" == 'Options' ]]; then
+            if [[ "$line" == '  -'* ]]; then
+                if [[ -n "$entry_prefix" ]]; then
+                    print -r -- "${entry_prefix}	${entry_desc}"
+                fi
+                entry_prefix="${trimmed%%  *}"
+                entry_desc="$(__dotfiles_claude_trim "${trimmed#"$entry_prefix"}")"
+                continue
+            fi
+        else
+            if [[ "$line" == '  '* && "$trimmed" == *'  '* ]]; then
+                if [[ -n "$entry_prefix" ]]; then
+                    print -r -- "${entry_prefix}	${entry_desc}"
+                fi
+                entry_prefix="${trimmed%%  *}"
+                entry_desc="$(__dotfiles_claude_trim "${trimmed#"$entry_prefix"}")"
+                continue
+            fi
+        fi
+
+        if [[ -n "$entry_prefix" ]]; then
+            if [[ -n "$entry_desc" ]]; then
+                entry_desc+=" "
+            fi
+            entry_desc+="$trimmed"
+        fi
+    done <<< "$help_output"
+
+    if [[ -n "$entry_prefix" ]]; then
+        print -r -- "${entry_prefix}	${entry_desc}"
+    fi
+}
+
+function __dotfiles_claude_emit_option_specs() {
+    local option_prefix="$1"
+    local description="$2"
+    local arg_token=""
+    local escaped_description=""
+    local flag=""
+    local flags_part="$option_prefix"
+    local last_field=""
+    local option_action=""
+    local -a option_flags
+
+    last_field="${option_prefix##* }"
+    if [[ "$last_field" == \<* || "$last_field" == \[* ]]; then
+        arg_token="$last_field"
+        flags_part="${option_prefix% $last_field}"
+    fi
+
+    escaped_description="$(__dotfiles_claude_escape_spec_text "$description")"
+    option_flags=("${(@s:,:)flags_part}")
+    for flag in "${option_flags[@]}"; do
+        flag="$(__dotfiles_claude_trim "$flag")"
+        [[ "$flag" == -* ]] || continue
+
+        if [[ -n "$arg_token" ]]; then
+            option_action="$(__dotfiles_claude_option_action "$arg_token" "$description")"
+            print -r -- "${flag}[${escaped_description}]${option_action}"
+        else
+            print -r -- "${flag}[${escaped_description}]"
+        fi
+    done
+}
+
+function __dotfiles_claude_generate_commands_from_help() {
+    local help_output="$1"
+    local alias_name command_names desc prefix
+
+    while IFS=$'\t' read -r prefix desc; do
+        [[ -n "$prefix" ]] || continue
+        command_names="${prefix%% *}"
+        for alias_name in ${(s:|:)command_names}; do
+            [[ -n "$alias_name" ]] || continue
+            print -r -- "${alias_name}:${desc}"
+        done
+    done <<< "$(__dotfiles_claude_collect_section_entries 'Commands' "$help_output")"
+}
+
+function __dotfiles_claude_generate_option_specs_from_help() {
+    local help_output="$1"
+    local desc prefix
+
+    while IFS=$'\t' read -r prefix desc; do
+        [[ -n "$prefix" ]] || continue
+        __dotfiles_claude_emit_option_specs "$prefix" "$desc"
+    done <<< "$(__dotfiles_claude_collect_section_entries 'Options' "$help_output")"
+}
+
+function __dotfiles_generate_claude_scope_cache() {
+    local current_version="$1"
+    shift
+
+    local cache_dir="" commands_file="" help_output="" options_file="" prefix="" tmp_commands="" tmp_options=""
+
+    [[ -n "$current_version" ]] || return 1
+
+    cache_dir="$(__dotfiles_claude_completion_cache_dir)" || return 1
+    prefix="$(__dotfiles_claude_scope_cache_prefix "$@")" || return 1
+    __dotfiles_claude_completion_path_is_safe "$cache_dir" || return 1
+    __dotfiles_claude_completion_path_is_safe "$prefix" || return 1
+    commands_file="${prefix}.commands"
+    options_file="${prefix}.options"
+    tmp_commands="${commands_file}.tmp.$$"
+    tmp_options="${options_file}.tmp.$$"
+
+    mkdir -p "$cache_dir" 2>/dev/null || return 1
+    if (( $# == 0 )); then
+        help_output="$(claude --help 2>/dev/null)" || return 1
+    else
+        help_output="$(claude "$@" --help 2>/dev/null)" || return 1
+    fi
+
+    __dotfiles_claude_generate_commands_from_help "$help_output" >| "$tmp_commands" || true
+    __dotfiles_claude_generate_option_specs_from_help "$help_output" >| "$tmp_options" || true
+
+    if ! command mv -f "$tmp_commands" "$commands_file"; then
+        command rm -f "$tmp_commands" "$tmp_options" 2>/dev/null || true
+        return 1
+    fi
+    if ! command mv -f "$tmp_options" "$options_file"; then
+        command rm -f "$tmp_options" 2>/dev/null || true
+        return 1
+    fi
+
+    print -r -- "$current_version" >| "$(__dotfiles_claude_scope_version_file "$@")"
+    return 0
+}
+
+function __dotfiles_load_claude_scope_cache() {
+    local prefix=""
+
+    prefix="$(__dotfiles_claude_scope_cache_prefix "$@")" || return 1
+    __DOTFILES_CLAUDE_PARSED_COMMANDS=()
+    __DOTFILES_CLAUDE_PARSED_OPTION_SPECS=()
+
+    if [[ -r "${prefix}.commands" ]]; then
+        __DOTFILES_CLAUDE_PARSED_COMMANDS=("${(@f)$(<"${prefix}.commands")}")
+    fi
+    if [[ -r "${prefix}.options" ]]; then
+        __DOTFILES_CLAUDE_PARSED_OPTION_SPECS=("${(@f)$(<"${prefix}.options")}")
+    fi
+
+    (( ${#__DOTFILES_CLAUDE_PARSED_COMMANDS[@]} > 0 || ${#__DOTFILES_CLAUDE_PARSED_OPTION_SPECS[@]} > 0 ))
+}
+
+function __dotfiles_claude_scope_cache_is_current() {
+    local current_version="$1"
+    shift
+
+    local version_file=""
+
+    version_file="$(__dotfiles_claude_scope_version_file "$@")" || return 1
+    [[ -n "$current_version" && -r "$version_file" && "$(<"$version_file")" == "$current_version" ]]
+}
+
+function __dotfiles_claude_acquire_scope_lock() {
+    local cache_dir="" lock_dir=""
+
+    cache_dir="$(__dotfiles_claude_completion_cache_dir)" || return 1
+    lock_dir="$(__dotfiles_claude_scope_lock_dir "$@")" || return 1
+    __dotfiles_claude_completion_path_is_safe "$cache_dir" || return 1
+    __dotfiles_claude_completion_path_is_safe "$lock_dir" || return 1
+
+    command mkdir -p "$cache_dir" 2>/dev/null || return 1
+    command mkdir "$lock_dir" 2>/dev/null
+}
+
+function __dotfiles_claude_release_scope_lock() {
+    local lock_dir=""
+
+    lock_dir="$(__dotfiles_claude_scope_lock_dir "$@")" || return 0
+    __dotfiles_claude_completion_path_is_safe "$lock_dir" || return 0
+
+    command rmdir "$lock_dir" 2>/dev/null || true
+}
+
+function __dotfiles_maybe_refresh_claude_scope_async() {
+    local current_version=""
+
+    (( $+commands[claude] )) || return 1
+
+    current_version="$(__dotfiles_claude_version)" || return 1
+    if __dotfiles_load_claude_scope_cache "$@" && __dotfiles_claude_scope_cache_is_current "$current_version" "$@"; then
+        return 0
+    fi
+
+    if ! __dotfiles_claude_acquire_scope_lock "$@"; then
+        return 0
+    fi
+
+    (
+        __dotfiles_generate_claude_scope_cache "$current_version" "$@"
+        __dotfiles_claude_release_scope_lock "$@"
+    ) >/dev/null 2>&1 &!
+    return 0
+}
+
+function __dotfiles_prepare_claude_scope_cache() {
+    local current_version=""
+
+    if __dotfiles_load_claude_scope_cache "$@"; then
+        current_version="$(__dotfiles_claude_version 2>/dev/null || true)"
+        if [[ -n "$current_version" ]] && ! __dotfiles_claude_scope_cache_is_current "$current_version" "$@"; then
+            __dotfiles_maybe_refresh_claude_scope_async "$@" || true
+        fi
+        return 0
+    fi
+
+    (( $+commands[claude] )) || return 1
+
+    current_version="$(__dotfiles_claude_version)" || return 1
+    if __dotfiles_claude_acquire_scope_lock "$@"; then
+        if __dotfiles_generate_claude_scope_cache "$current_version" "$@"; then
+            __dotfiles_claude_release_scope_lock "$@"
+            __dotfiles_load_claude_scope_cache "$@"
+            return $?
+        fi
+        __dotfiles_claude_release_scope_lock "$@"
+    fi
+
+    return 1
+}
+
+function __dotfiles_loaded_claude_scope_has_command() {
+    local candidate="$1"
+    local command_entry=""
+
+    for command_entry in "${__DOTFILES_CLAUDE_PARSED_COMMANDS[@]}"; do
+        if [[ "${command_entry%%:*}" == "$candidate" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+function _claude() {
+    local command_label='claude'
+    local candidate=""
+    local saved_current="$CURRENT"
+    local scope_index=2
+    local state=""
+    local -a completion_specs saved_words scope_commands scope_option_specs scope_parts shifted_words
+
+    while true; do
+        __dotfiles_prepare_claude_scope_cache "${scope_parts[@]}" || break
+        if (( scope_index < saved_current )); then
+            candidate="${words[scope_index]}"
+            if [[ -n "$candidate" && "$candidate" != -* ]] && __dotfiles_loaded_claude_scope_has_command "$candidate"; then
+                scope_parts+=("$candidate")
+                ((scope_index++))
+                continue
+            fi
+        fi
+        break
+    done
+
+    __dotfiles_prepare_claude_scope_cache "${scope_parts[@]}" || {
+        autoload -Uz _gnu_generic
+        _gnu_generic "$@"
+        return 0
+    }
+
+    scope_commands=("${__DOTFILES_CLAUDE_PARSED_COMMANDS[@]}")
+    scope_option_specs=("${__DOTFILES_CLAUDE_PARSED_OPTION_SPECS[@]}")
+    completion_specs=("${scope_option_specs[@]}")
+
+    if (( ${#scope_commands[@]} > 0 )); then
+        completion_specs+=("1:command:->claude-command")
+        completion_specs+=("*::arg:->claude-args")
+    fi
+
+    if (( ${#scope_parts[@]} > 0 )); then
+        command_label+=" ${(j: :)scope_parts}"
+    fi
+
+    shifted_words=("${(@)words[$scope_index,-1]}")
+    if (( ${#shifted_words[@]} == 0 )); then
+        shifted_words=('')
+    fi
+    shifted_words[1]="$command_label"
+
+    saved_words=("${words[@]}")
+    words=("${shifted_words[@]}")
+    CURRENT=$(( saved_current - scope_index + 1 ))
+
+    _arguments -C -s -S "${completion_specs[@]}"
+    words=("${saved_words[@]}")
+    CURRENT=$saved_current
+
+    case "$state" in
+    claude-command)
+        _describe -t commands "${command_label} commands" scope_commands
+        return 0
+        ;;
+    esac
+
+    return 0
+}
