@@ -116,6 +116,10 @@ function setup_cmux_config() {
 
     mkdir -p "${config_home}/cmux"
     set_config_file_target "/config/cmux/cmux.json" "${config_home}/cmux/cmux.json"
+
+    # cmux のターミナル描画は Ghostty 互換設定を参照する
+    mkdir -p "${config_home}/ghostty"
+    set_config_file_target "/config/ghostty/config" "${config_home}/ghostty/config"
 }
 
 function is_legacy_post_checkout_hook() {

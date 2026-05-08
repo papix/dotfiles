@@ -1,0 +1,6 @@
+# cmux は Ghostty 互換設定でターミナルの表示を制御する
+font-family = "HackGen Console NF"
+font-size = 14
+theme = "iTerm2 Solarized Dark"
+minimum-contrast = 3
+term = xterm-256color

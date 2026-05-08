@@ -32,6 +32,28 @@ ls ~/.local/share/fonts/HackGen*NF*.ttf
 2. `Minimum Contrast` を有効化して、必要最小限だけスライダーを上げる
 3. その後 tmux を再読み込みして表示を確認する（`Ctrl-q r`）
 
+#### cmux
+
+cmuxのターミナル表示はGhostty互換設定を参照します。`bash setup.sh` を実行すると、`config/ghostty/config` が `~/.config/ghostty/config` にシンボリックリンクされます。
+
+既定値はiTerm2の設定に合わせています。
+
+```ini
+font-family = "HackGen Console NF"
+font-size = 14
+theme = "iTerm2 Solarized Dark"
+minimum-contrast = 3
+term = xterm-256color
+```
+
+反映するにはcmuxで `Cmd+Shift+,` を押すか、次を実行します。
+
+```bash
+cmux reload-config
+```
+
+フォントが既存のsurfaceへ反映されない場合は、新しいsurfaceまたはworkspaceを開き直してください。
+
 #### VS Code / Cursor
 `settings.json`に以下を追加：
 ```json
