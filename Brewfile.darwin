@@ -1,1 +1,4 @@
+tap "manaflow-ai/cmux"
+
 cask "secret-manager-cli"
+cask "cmux"

@@ -4,6 +4,8 @@
 
 このプロジェクトでは、ghqで管理されているリポジトリごとに自動的にtmuxセッションを作成・管理します。
 
+macOS で cmux を使っている場合は、cmux のワークスペースとペインを優先します。cmux 内では tmux の自動起動と `tmux` ラッパーを無効化し、`work` は cmux の新規ワークスペースを作成します。
+
 ## 自動セッション管理
 
 ### セッション名の規則
@@ -56,6 +58,20 @@ exit  # すべてのウィンドウで実行
 ```
 
 ## カスタマイズ
+
+### cmux向けキーバインド
+
+`~/.config/cmux/cmux.json` は `config/cmux/cmux.json` へのシンボリックリンクとして配置されます。主な tmux 風キーバインドは次の通りです。
+
+```text
+Ctrl-q c      新しいworkspace
+Ctrl-q n/b    次/前のworkspace
+Ctrl-q 1-9    番号でworkspace移動
+Ctrl-q s/v    下/右にsplit
+Ctrl-q h/j/k/l pane移動
+Ctrl-q q/Q    surface/workspaceを閉じる
+Ctrl-q V      cmux copy mode
+```
 
 ### 自動起動を無効化
 

@@ -22,7 +22,7 @@ assert_contains() {
     fi
 }
 
-assert_contains 'tmux peco ag gh op' "$INIT_FILE"
+assert_contains 'tmux cmux peco ag gh op' "$INIT_FILE"
 if grep -Fq -- 'gwq' "$INIT_FILE"; then
     echo "ASSERTION FAILED: expected gwq to be removed from $INIT_FILE" >&2
     exit 1

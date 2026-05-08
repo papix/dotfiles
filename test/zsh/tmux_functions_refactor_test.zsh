@@ -27,6 +27,18 @@ function assert_not_contains() {
     fi
 }
 
+function assert_contains() {
+    local needle="$1"
+    local haystack="$2"
+    local message="$3"
+    if ! print -r -- "$haystack" | grep -F -- "$needle" >/dev/null 2>&1; then
+        echo "ASSERTION FAILED: ${message}" >&2
+        echo "  expected to contain: ${needle}" >&2
+        echo "  actual             : ${haystack}" >&2
+        return 1
+    fi
+}
+
 tmp_dir="$(mktemp -d)"
 home_dir="$tmp_dir/home"
 mkdir -p "$home_dir/.ghq/github.com/papix/dotfiles"
@@ -40,6 +52,8 @@ unset SSH_CONNECTION
 unset TERM_PROGRAM
 unset VSCODE_INJECTION
 unset DISABLE_AUTO_TMUX
+unset CMUX_WORKSPACE_ID
+unset CMUX_SURFACE_ID
 export PS1=""
 typeset -gA COMMAND_CACHE
 
@@ -60,6 +74,41 @@ set -e
 source_output="$(cat "$source_err_file")"
 assert_eq "0" "$source_exit_code" "sourcing 82-tmux.zsh should not fail under nounset"
 assert_not_contains "parameter not set" "$source_output" "sourcing 82-tmux.zsh should not emit nounset warnings"
+
+assert_eq "1" "$({ is_inside_cmux && echo 0 || echo 1; })" "is_inside_cmux should be false outside cmux"
+
+export CMUX_WORKSPACE_ID="workspace:1"
+export CMUX_SURFACE_ID="surface:1"
+assert_eq "0" "$({ is_inside_cmux && echo 0 || echo 1; })" "is_inside_cmux should require cmux workspace and surface ids"
+
+COMMAND_CACHE[tmux]=1
+export TERM_PROGRAM="iTerm.app"
+assert_eq "1" "$({ should_auto_start_tmux && echo 0 || echo 1; })" "tmux auto-start should be disabled inside cmux"
+
+unset CMUX_WORKSPACE_ID
+unset CMUX_SURFACE_ID
+unset TERM_PROGRAM
+unset 'COMMAND_CACHE[tmux]'
+
+function tmux() {
+    print -r -- "underlying tmux"
+    return 0
+}
+
+export PS1="% "
+export CMUX_WORKSPACE_ID="workspace:1"
+export CMUX_SURFACE_ID="surface:1"
+set +e
+tmux_disabled_output="$({ source "$ROOT_DIR/config/zsh/82-tmux.zsh"; tmux; } 2>&1)"
+tmux_disabled_exit_code=$?
+set -e
+assert_eq "1" "$tmux_disabled_exit_code" "tmux wrapper should fail inside cmux"
+assert_contains "tmux is disabled inside cmux" "$tmux_disabled_output" "tmux wrapper should explain cmux-native operation"
+
+unfunction tmux
+export PS1=""
+unset CMUX_WORKSPACE_ID
+unset CMUX_SURFACE_ID
 
 cd "$HOME/.ghq/github.com/papix/dotfiles"
 assert_eq "papix/dotfiles" "$(current-workspace)" "current-workspace should map github.com paths to owner/repo"

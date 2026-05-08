@@ -15,12 +15,14 @@ assert_contains() {
 
 # 期待: common() は主要処理をサブ関数に分割して呼び出す
 assert_contains 'function setup_tmux_config() {' "$COMMON_LIB"
+assert_contains 'function setup_cmux_config() {' "$COMMON_LIB"
 assert_contains 'function setup_git_config() {' "$COMMON_LIB"
 assert_contains 'function setup_vim_config() {' "$COMMON_LIB"
 assert_contains 'function setup_neovim_config() {' "$COMMON_LIB"
 assert_contains 'function setup_zsh_config() {' "$COMMON_LIB"
 
 assert_contains 'setup_tmux_config' "$COMMON_LIB"
+assert_contains 'setup_cmux_config' "$COMMON_LIB"
 assert_contains 'setup_git_config' "$COMMON_LIB"
 assert_contains 'setup_vim_config' "$COMMON_LIB"
 assert_contains 'setup_neovim_config' "$COMMON_LIB"

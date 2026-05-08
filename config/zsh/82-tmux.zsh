@@ -35,6 +35,10 @@ if [[ -n "${TMUX:-}" ]]; then
 fi
 unfunction __dotfiles_setup_tmux_hooks
 
+function is_inside_cmux() {
+    [[ -n "${CMUX_WORKSPACE_ID:-}" && -n "${CMUX_SURFACE_ID:-}" ]]
+}
+
 function current-workspace() {
     local pwd=$(pwd)
     local root=""
@@ -116,6 +120,7 @@ function resolve_tmux_session_name() {
 function should_auto_start_tmux() {
     [[ -z "${DISABLE_AUTO_TMUX:-}" ]] || return 1
     [[ -z "${TMUX:-}" ]] || return 1
+    ! is_inside_cmux || return 1
     [[ -z "${SSH_CONNECTION:-}" ]] || return 1
     [[ "${TERM_PROGRAM:-}" == "iTerm.app" ]] || return 1
     [[ -z "${VSCODE_INJECTION:-}" ]] || return 1
@@ -141,8 +146,8 @@ function auto_start_tmux_session() {
     fi
 }
 
-# tmuxの自動起動（iTerm2限定、SSH経由では無効、環境変数で無効化可能）
-# 条件: iTerm2 && !SSH && !VSCode && !Cursor && !tmux内 && !DISABLE_AUTO_TMUX && tmuxコマンド存在
+# tmuxの自動起動（iTerm2限定、cmux/SSH経由では無効、環境変数で無効化可能）
+# 条件: iTerm2 && !cmux && !SSH && !VSCode && !Cursor && !tmux内 && !DISABLE_AUTO_TMUX && tmuxコマンド存在
 if should_auto_start_tmux; then
     auto_start_tmux_session
 fi
@@ -151,7 +156,12 @@ fi
 # 引数なしで実行時、既存セッションがあれば自動attach
 # 参考: https://qiita.com/kawaz/items/0cd28a955205c79ec7e3
 # 条件: インタラクティブシェル && tmux外 && tmuxコマンド存在
-if [[ -n "${PS1:-}" ]] && [[ -z "${TMUX:-}" ]] && type tmux >/dev/null 2>&1; then
+if [[ -n "${PS1:-}" ]] && is_inside_cmux; then
+    function tmux() {
+        echo "Error: tmux is disabled inside cmux. Use cmux workspaces and panes instead." >&2
+        return 1
+    }
+elif [[ -n "${PS1:-}" ]] && [[ -z "${TMUX:-}" ]] && type tmux >/dev/null 2>&1; then
     function tmux() {
         if [[ $# == 0 ]] && command tmux has-session 2>/dev/null; then
             command tmux attach-session
@@ -163,16 +173,76 @@ fi
 
 # AIツール用ワークスペースを一発構築するコマンド
 # `work` 単体: peco + ghq でリポジトリを選択し、3分割ウィンドウで claude / codex を起動する
-# `work new <branch>`: 現在のリポジトリから worktree を作成し、その worktree を tmux で開く
+# `work new <branch>`: 現在のリポジトリから worktree を作成し、その worktree を tmux/cmux で開く
 # `work prune`: 不要になった worktree を対話的に削除する
-function work-open-window() {
+function __dotfiles_ai_command_line() {
+    local command_name="$1"
+    local args_value="${2:-}"
+
+    if [[ -n "$args_value" ]]; then
+        print -r -- "${command_name} ${args_value}"
+    else
+        print -r -- "$command_name"
+    fi
+}
+
+function work-open-cmux-workspace() {
     local target_dir="$1"
-    if [[ -z "${TMUX:-}" ]]; then
-        echo "Error: work must be run inside tmux" >&2
+    if ! command -v cmux >/dev/null 2>&1; then
+        echo "Error: cmux command not found" >&2
         return 1
     fi
+
+    local workspace_name
+    workspace_name="$(basename "$target_dir")"
+
+    local claude_command
+    local codex_command
+    claude_command="$(__dotfiles_ai_command_line claude "${DOTFILES_CLAUDE_ARGS:-}")"
+    codex_command="$(__dotfiles_ai_command_line codex "${DOTFILES_CODEX_ARGS:-}")"
+
+    local create_output
+    if ! create_output="$(command cmux new-workspace --cwd "$target_dir" --command "exec ${claude_command}" 2>&1)"; then
+        print -r -- "$create_output" >&2
+        return 1
+    fi
+
+    local workspace_ref
+    workspace_ref="$(print -r -- "$create_output" | awk 'END { print $NF }')"
+    if [[ "$workspace_ref" != workspace:* ]]; then
+        workspace_ref=""
+    fi
+
+    local workspace_args=()
+    if [[ -n "$workspace_ref" ]]; then
+        workspace_args=(--workspace "$workspace_ref")
+        command cmux rename-workspace --workspace "$workspace_ref" "$workspace_name" >/dev/null 2>&1 || true
+    fi
+
+    local quoted_target_dir="${(q)target_dir}"
+
+    if command cmux new-split right "${workspace_args[@]}" >/dev/null 2>&1; then
+        command cmux send "${workspace_args[@]}" "cd ${quoted_target_dir}\nexec ${codex_command}\n" >/dev/null 2>&1 || true
+        if command cmux new-split down "${workspace_args[@]}" >/dev/null 2>&1; then
+            command cmux send "${workspace_args[@]}" "cd ${quoted_target_dir}\n" >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+function work-open-window() {
+    local target_dir="$1"
     if [[ -z "$target_dir" || ! -d "$target_dir" ]]; then
         echo "Error: target directory not found" >&2
+        return 1
+    fi
+
+    if is_inside_cmux; then
+        work-open-cmux-workspace "$target_dir"
+        return $?
+    fi
+
+    if [[ -z "${TMUX:-}" ]]; then
+        echo "Error: work must be run inside tmux or cmux" >&2
         return 1
     fi
 
@@ -185,9 +255,14 @@ function work-open-window() {
     tmux split-window -t "$right_top_pane" -vc "$target_dir" >/dev/null
     tmux resize-pane -t "$left_pane" -x '60%'
 
+    local claude_command
+    local codex_command
+    claude_command="$(__dotfiles_ai_command_line claude "${DOTFILES_CLAUDE_ARGS:-}")"
+    codex_command="$(__dotfiles_ai_command_line codex "${DOTFILES_CODEX_ARGS:-}")"
+
     # コマンド起動（send-keys で実行すると終了後もシェルに戻れる）
-    tmux send-keys -t "$left_pane" 'claude --ai-permission-flag-redacted' Enter
-    tmux send-keys -t "$right_top_pane" 'codex --ai-sandbox-flag-redacted' Enter
+    tmux send-keys -t "$left_pane" "$claude_command" Enter
+    tmux send-keys -t "$right_top_pane" "$codex_command" Enter
 
     tmux select-pane -t "$left_pane"
 }
@@ -434,7 +509,7 @@ function work-prune() {
 
 function work-help() {
     echo "Usage:"
-    echo "  work                Open a repo picker and launch the AI workspace in tmux"
+    echo "  work                Open a repo picker and launch the AI workspace in tmux or cmux"
     echo "  work new <branch>   Create or reuse a worktree and open it"
     echo "  work prune          Remove managed worktrees interactively"
     echo "  work prune stale    Clean stale worktree metadata"

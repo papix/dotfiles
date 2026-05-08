@@ -29,8 +29,8 @@ assert_not_contains() {
 }
 
 # 期待: tree は早期 COMMAND_CACHE に含めない
-assert_contains 'tmux peco ag gh op' "$INIT_FILE"
-assert_not_contains 'tmux peco ag gh op tree' "$INIT_FILE"
+assert_contains 'tmux cmux peco ag gh op' "$INIT_FILE"
+assert_not_contains 'tmux cmux peco ag gh op tree' "$INIT_FILE"
 assert_not_contains 'gwq' "$INIT_FILE"
 
 # 期待: ~/.zshrc.alias はローカル互換用途として明記する

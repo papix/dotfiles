@@ -39,6 +39,18 @@ function assert_not_contains() {
     fi
 }
 
+function assert_contains() {
+    local needle="$1"
+    local haystack="$2"
+    local message="$3"
+    if [[ "$haystack" != *"$needle"* ]]; then
+        echo "ASSERTION FAILED: ${message}" >&2
+        echo "  expected: ${needle}" >&2
+        echo "  actual  : ${haystack}" >&2
+        return 1
+    fi
+}
+
 function zle() { return 0 }
 function bindkey() { return 0 }
 
@@ -56,6 +68,8 @@ unset SSH_CONNECTION
 unset TERM_PROGRAM
 unset VSCODE_INJECTION
 unset DISABLE_AUTO_TMUX
+unset CMUX_WORKSPACE_ID
+unset CMUX_SURFACE_ID
 export PS1=""
 typeset -gA COMMAND_CACHE
 
@@ -92,6 +106,45 @@ assert_eq "$expected_path" "$PWD" "work-new should cd into the created worktree 
 assert_file_exists "$expected_path/.git" "work-new should create a linked worktree"
 current_branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
 assert_eq "feature-foo" "$current_branch" "work-new should check out the requested branch inside the new worktree"
+
+tmp_bin="$TMP_DIR/bin"
+mkdir -p "$tmp_bin"
+cat >"$tmp_bin/cmux" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "$*" >> "$CMUX_LOG"
+
+case "${1:-}" in
+    new-workspace)
+        printf 'OK workspace:7\n'
+        ;;
+    *)
+        printf 'OK\n'
+        ;;
+esac
+EOF
+chmod +x "$tmp_bin/cmux"
+
+old_path="$PATH"
+export PATH="$tmp_bin:$PATH"
+export CMUX_LOG="$TMP_DIR/cmux.log"
+export CMUX_WORKSPACE_ID="workspace:1"
+export CMUX_SURFACE_ID="surface:1"
+: >"$CMUX_LOG"
+
+work-open-window "$repo_path" >/dev/null 2>&1
+cmux_invocations="$(cat "$CMUX_LOG")"
+assert_contains "new-workspace --cwd $repo_path --command exec claude" "$cmux_invocations" "work-open-window should create a cmux workspace inside cmux"
+assert_contains "new-split right --workspace workspace:7" "$cmux_invocations" "work-open-window should use cmux split API inside cmux"
+assert_contains "send --workspace workspace:7 cd ${(q)repo_path}\\nexec codex\\n" "$cmux_invocations" "work-open-window should launch codex via cmux"
+assert_not_contains "tmux" "$cmux_invocations" "work-open-window should not call tmux inside cmux"
+assert_not_contains "dangerously" "$cmux_invocations" "work-open-window should not hard-code unsafe AI flags"
+
+export PATH="$old_path"
+unset CMUX_LOG
+unset CMUX_WORKSPACE_ID
+unset CMUX_SURFACE_ID
 
 cd "$repo_path"
 rm -rf "$expected_path"

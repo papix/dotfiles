@@ -31,7 +31,7 @@ function __dotfiles_prime_command_cache() {
         # ドキュメントと表示
         cpandoc tldr colordiff
         # バージョン管理と開発
-        tmux peco ag gh op
+        tmux cmux peco ag gh op
         # エディタ
         nvim
     )

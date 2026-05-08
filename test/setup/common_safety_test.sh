@@ -60,6 +60,8 @@ assert_contains 'function setup_state_home() {' "$COMMON_LIB"
 assert_contains 'local SOURCE DEST DEST_DIR READLINK' "$COMMON_LIB"
 assert_contains 'SOURCE="${DOTFILES_DIR}$1"' "$COMMON_LIB"
 assert_contains 'config_home="$(setup_config_home)"' "$COMMON_LIB"
+assert_contains 'function setup_cmux_config() {' "$COMMON_LIB"
+assert_contains 'set_config_file_target "/config/cmux/cmux.json" "${config_home}/cmux/cmux.json"' "$COMMON_LIB"
 assert_contains 'for segment in "${DOTFILES_DIR}"/config/tmux-powerline/segments/*.sh; do' "$COMMON_LIB"
 assert_contains 'if [[ -d "${DOTFILES_DIR}/config/vim/vim/colors" ]]; then' "$COMMON_LIB"
 assert_contains 'if [[ -d "${DOTFILES_DIR}/config/zsh" ]]; then' "$COMMON_LIB"
@@ -94,6 +96,7 @@ source "$SETUP_SH"
 set_config_file() { :; }
 set_config_file_target() { :; }
 setup_tmux_config() { :; }
+setup_cmux_config() { :; }
 setup_git_config() { :; }
 setup_vim_config() { :; }
 setup_neovim_config() { :; }

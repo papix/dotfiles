@@ -1,0 +1,182 @@
+{
+  "$schema": "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux.schema.json",
+  "schemaVersion": 1,
+  "app": {
+    "language": "ja",
+    "newWorkspacePlacement": "afterCurrent"
+  },
+  "terminal": {
+    "showScrollBar": true,
+    "autoResumeAgentSessions": true
+  },
+  "automation": {
+    "socketControlMode": "cmuxOnly",
+    "claudeCodeIntegration": true,
+    "cursorIntegration": true,
+    "geminiIntegration": true
+  },
+  "browser": {
+    "openTerminalLinksInCmuxBrowser": true,
+    "interceptTerminalOpenCommandInCmuxBrowser": true,
+    "hostsToOpenInEmbeddedBrowser": [
+      "localhost",
+      "127.0.0.1",
+      "0.0.0.0",
+      "*.localtest.me"
+    ]
+  },
+  "shortcuts": {
+    "bindings": {
+      "reloadConfiguration": [
+        "ctrl+q",
+        "r"
+      ],
+      "newTab": [
+        "ctrl+q",
+        "c"
+      ],
+      "goToWorkspace": [
+        "ctrl+q",
+        "w"
+      ],
+      "commandPalette": [
+        "ctrl+q",
+        "m"
+      ],
+      "nextSidebarTab": [
+        "ctrl+q",
+        "n"
+      ],
+      "prevSidebarTab": [
+        "ctrl+q",
+        "b"
+      ],
+      "selectWorkspaceByNumber": [
+        "ctrl+q",
+        "1"
+      ],
+      "renameWorkspace": [
+        "ctrl+q",
+        ","
+      ],
+      "closeWorkspace": [
+        "ctrl+q",
+        "Q"
+      ],
+      "newSurface": [
+        "ctrl+q",
+        "t"
+      ],
+      "closeTab": [
+        "ctrl+q",
+        "q"
+      ],
+      "splitDown": [
+        "ctrl+q",
+        "s"
+      ],
+      "splitRight": [
+        "ctrl+q",
+        "v"
+      ],
+      "focusLeft": [
+        "ctrl+q",
+        "h"
+      ],
+      "focusDown": [
+        "ctrl+q",
+        "j"
+      ],
+      "focusUp": [
+        "ctrl+q",
+        "k"
+      ],
+      "focusRight": [
+        "ctrl+q",
+        "l"
+      ],
+      "toggleSplitZoom": [
+        "ctrl+q",
+        "z"
+      ],
+      "equalizeSplits": [
+        "ctrl+q",
+        "="
+      ],
+      "toggleTerminalCopyMode": [
+        "ctrl+q",
+        "V"
+      ],
+      "showNotifications": [
+        "ctrl+q",
+        "i"
+      ],
+      "jumpToUnread": [
+        "ctrl+q",
+        "u"
+      ]
+    }
+  },
+  "commands": [
+    {
+      "name": "AI Workspace",
+      "description": "Claude, Codex, and shell split layout for the current directory",
+      "keywords": [
+        "ai",
+        "agent",
+        "claude",
+        "codex",
+        "work"
+      ],
+      "workspace": {
+        "name": "AI Workspace",
+        "cwd": ".",
+        "layout": {
+          "direction": "horizontal",
+          "split": 0.6,
+          "children": [
+            {
+              "pane": {
+                "surfaces": [
+                  {
+                    "type": "terminal",
+                    "name": "Claude",
+                    "command": "exec sh -lc 'set -- claude ${DOTFILES_CLAUDE_ARGS:-}; exec \"$@\"' sh",
+                    "focus": true
+                  }
+                ]
+              }
+            },
+            {
+              "direction": "vertical",
+              "split": 0.5,
+              "children": [
+                {
+                  "pane": {
+                    "surfaces": [
+                      {
+                        "type": "terminal",
+                        "name": "Codex",
+                        "command": "exec sh -lc 'set -- codex ${DOTFILES_CODEX_ARGS:-}; exec \"$@\"' sh"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "pane": {
+                    "surfaces": [
+                      {
+                        "type": "terminal",
+                        "name": "Shell"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

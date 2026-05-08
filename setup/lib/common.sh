@@ -110,6 +110,14 @@ function setup_tmux_config() {
     fi
 }
 
+function setup_cmux_config() {
+    local config_home
+    config_home="$(setup_config_home)"
+
+    mkdir -p "${config_home}/cmux"
+    set_config_file_target "/config/cmux/cmux.json" "${config_home}/cmux/cmux.json"
+}
+
 function is_legacy_post_checkout_hook() {
     local hook_path="$1"
     local link_target=""
@@ -305,6 +313,7 @@ function common() {
     set_config_file_target "/config/claude_env.sh" "${config_home}/claude_env.sh"
 
     setup_tmux_config
+    setup_cmux_config
 
     mkdir -p "${config_home}/peco"
     set_config_file_target "/config/peco/config.json" "${config_home}/peco/config.json"
