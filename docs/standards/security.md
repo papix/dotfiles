@@ -9,15 +9,10 @@
 ## 機密情報の管理
 
 ### Secret manager（推奨）
-```text
-Vault: dotfiles
-Item: shared-env
-Field: NPM_TOKEN
-```
 
-`op` が利用可能でも、シェル起動や Claude Code 実行のたびに認証プロンプトを出さないよう、自動読込は `DOTFILES_SECRET_MANAGER_AUTOLOAD=1` のときだけ有効です。取得できた値は `XDG_CACHE_HOME` 配下に安全な権限でキャッシュします。
+Secrets は OS 側の secret manager やユーザー管理の secret store に保存し、tracked file には書かないでください。必要に応じて `~/.zshenv.local` / `~/.zshrc.local` から環境変数として読み込んでください。
 
-### ローカル環境変数（最終手段）
+### ローカル環境変数
 ```bash
 # ~/.zshenv.local / ~/.zshrc.local に記載（gitignore対象）
 export API_KEY="your-secret-key"

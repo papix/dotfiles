@@ -35,32 +35,25 @@ bash setup.sh
 |------|------|
 | `ALLOW_HOMEBREW_INSTALL=1` | Homebrew 公式インストーラの実行を許可（Linux） |
 | `DISABLE_AUTO_TMUX=1` | tmux 自動起動を無効化 |
-| `DOTFILES_SECRET_MANAGER_VAULT` | Secret manager の vault 名（既定: `dotfiles`） |
-| `DOTFILES_SECRET_MANAGER_ITEM` | Secret manager の item 名（既定: `shared-env`） |
-| `DOTFILES_SECRET_MANAGER_AUTOLOAD=1` | `bash_env.sh` / `claude_env.sh` で Secret manager 自動読込を有効化 |
+| `DOTFILES_CLAUDE_ARGS` | `work` が起動する `claude` へ渡す追加引数 |
+| `DOTFILES_CODEX_ARGS` | `work` が起動する `codex` へ渡す追加引数 |
 
 ### Secrets
 
-秘密情報は `~/.zshenv.local` / `~/.zshrc.local` より Secret manager を優先できます。既定の参照先は `local-secret://example/NPM_TOKEN` です。`bash_env.sh` / `claude_env.sh` での自動読込は `DOTFILES_SECRET_MANAGER_AUTOLOAD=1` のときだけ有効になり、取得できた値は `XDG_CACHE_HOME` 配下に安全な権限でキャッシュします。
-
-```text
-Vault: dotfiles
-Item: shared-env
-Field: NPM_TOKEN
-```
-
-Linux では Secret manager CLI (`op`) があれば動作します。デスクトップ連携を使う場合は Secret manager for Linux と PolKit agent を別途用意してください。`op` がない、または未サインインの場合は既存キャッシュとローカル環境変数へフォールバックします。
+秘密情報は `~/.zshenv.local` / `~/.zshrc.local` などの gitignore 対象ファイル、または OS 側の secret manager で管理してください。`NPM_TOKEN` が未設定の場合は `gh auth token` から安全な権限で `XDG_CACHE_HOME` 配下にキャッシュします。
 
 ### Git hooks
 
-- `pre-commit`: `lint-shell` と `gitleaks` を実行します。
+- `pre-commit`: `prek` に委譲します。`.pre-commit-config.yaml` があるリポジトリで設定済み hook を実行し、このリポジトリでは `lint-shell` と `gitleaks protect --staged` を実行します。
 - `pre-push`: push 対象コミットに対して `gitleaks` を実行します。
 - GitHub Actions の `CI` でも `secret-scan` ジョブが `gitleaks` を実行します。
 - 既存リポジトリに適用する場合は、各リポジトリで `git init` を実行してください。
+- `prek` の hook は `SKIP=lint-shell,gitleaks git commit -m 'message'` のように個別スキップできます。
 
 ## 便利コマンド
 
 - `vless <file...>`: nvim の閲覧専用モードで開き、外部更新時は自動で再読込します。
+- `work`: tmux または cmux 内で、Claude / Codex / shell の作業レイアウトを開きます。cmux 内では tmux を起動しません。
 
 ## 破壊的変更 (Breaking Changes)
 

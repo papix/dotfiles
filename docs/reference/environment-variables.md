@@ -66,6 +66,18 @@
 
 ### 開発ツール
 
+#### `DOTFILES_CLAUDE_ARGS`
+- **型**: string
+- **デフォルト**: 空
+- **説明**: `work` が起動する `claude` に渡す追加引数
+- **設定場所**: `~/.zshrc.local`
+
+#### `DOTFILES_CODEX_ARGS`
+- **型**: string
+- **デフォルト**: 空
+- **説明**: `work` が起動する `codex` に渡す追加引数
+- **設定場所**: `~/.zshrc.local`
+
 #### `GOPATH`
 - **型**: string
 - **デフォルト**: `$HOME/.ghq`
@@ -91,27 +103,15 @@
 
 ### Secrets
 
-#### `DOTFILES_SECRET_MANAGER_VAULT`
+#### `NPM_TOKEN`
 - **型**: string
-- **デフォルト**: `dotfiles`
-- **説明**: Secret manager から secrets を読むときの vault 名
-- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
-
-#### `DOTFILES_SECRET_MANAGER_ITEM`
-- **型**: string
-- **デフォルト**: `shared-env`
-- **説明**: Secret manager から secrets を読むときの item 名
-- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
-
-#### `DOTFILES_SECRET_MANAGER_AUTOLOAD`
-- **型**: boolean (1/0)
-- **デフォルト**: 0
-- **説明**: `config/bash_env.sh` / `config/claude_env.sh` で Secret manager から secrets を自動読込する
-- **設定場所**: `config/zshenv`, `config/bash_env.sh`, `config/claude_env.sh`
+- **デフォルト**: 空
+- **説明**: npm 認証トークン。未設定時は `gh auth token` から `XDG_CACHE_HOME` 配下に安全な権限でキャッシュする
+- **設定場所**: `~/.zshenv.local`, `~/.zshrc.local`, `config/bash_env.sh`, `config/claude_env.sh`
 
 ## ローカル設定
 
-`~/.zshrc.local` / `~/.zshenv.local` は、プロキシや PATH などの machine-specific な設定に使います。秘密情報は Secret manager を推奨します。
+`~/.zshrc.local` / `~/.zshenv.local` は、プロキシや PATH などの machine-specific な設定に使います。秘密情報は gitignore 対象ファイルか OS 側の secret manager で管理してください。
 
 ```bash
 # プロキシ設定

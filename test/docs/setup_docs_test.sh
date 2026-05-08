@@ -16,9 +16,7 @@ assert_contains() {
 
 assert_contains 'bash setup.sh --doctor' "$README_FILE"
 assert_contains 'bash setup.sh --dry-run' "$README_FILE"
-assert_contains 'Vault: dotfiles' "$README_FILE"
-assert_contains 'Item: shared-env' "$README_FILE"
-assert_contains 'Secret manager CLI (`op`)' "$SETUP_DOC"
-assert_contains 'Field: NPM_TOKEN' "$SETUP_DOC"
+assert_contains 'export NPM_TOKEN="..."' "$SETUP_DOC"
+assert_contains 'gh auth token' "$SETUP_DOC"
 
 echo "setup_docs_test: ok"

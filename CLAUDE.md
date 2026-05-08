@@ -7,10 +7,10 @@ A comprehensive dotfiles repository providing a modular Zsh configuration, tmux 
 ## Tech Stack
 
 - Shell: Zsh (modular configuration)
-- Terminal Multiplexer: tmux + tmux-powerline
+- Terminal Workspace: cmux (macOS) + tmux/tmux-powerline fallback
 - Editor: Neovim
 - Package Manager: Homebrew
-- Tools: peco, ghq, direnv, mise, actionlint, gitleaks, shellcheck, shfmt, tig, tree, colordiff, tldr, ag, roots, azure-cli
+- Tools: peco, ghq, direnv, mise, prek, actionlint, gitleaks, shellcheck, shfmt, tig, tree, colordiff, tldr, ag, roots, azure-cli
 
 ## Development Standards
 
@@ -32,9 +32,9 @@ export DISABLE_AUTO_TMUX=1
 
 ## Key Features
 
-- **Git hooks**: Secret scanning with gitleaks (pre-commit hook)
+- **Git hooks**: prek-based pre-commit hooks and gitleaks secret scanning
 - **Fonts**: HackGen Nerd Font auto-installation
-- **Tmux**: Automatic session management, Git repository-aware window names
+- **cmux/tmux**: cmux-native workspaces on macOS, tmux fallback session management, Git repository-aware tmux window names
 - **Clipboard**: OSC52 fallback support (works in remote environments)
 
 ## Important Notes
@@ -61,7 +61,7 @@ Zsh configuration managed by numbered modules in `config/zsh/`:
 - 70-functions.zsh: Utility functions
 - 80-*.zsh: External tool integrations (editor, peco, pnpm)
 - 81-git.zsh: Git extensions
-- 82-tmux.zsh: Tmux integration and auto-start
+- 82-tmux.zsh: cmux-aware tmux integration and auto-start
 - 90-external.zsh: Other external tools
 
 See respective documentation for details.

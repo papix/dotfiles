@@ -54,15 +54,13 @@ bash setup.sh
 - ✅ 設定ファイルのシンボリックリンクを作成
 - ✅ フォントをインストール
 
-必要なら、事前に Secret manager に以下の secrets を用意してください。
+必要なら、事前にローカル環境変数として secrets を用意してください。
 
-```text
-Vault: dotfiles
-Item: shared-env
-Field: NPM_TOKEN
+```bash
+export NPM_TOKEN="..."
 ```
 
-自動読込を有効にしたい場合は、`~/.zshenv.local` などで `export DOTFILES_SECRET_MANAGER_AUTOLOAD=1` を設定してください。
+設定は `~/.zshenv.local` などの gitignore 対象ファイルに置いてください。
 
 ## ステップ4: 新しいシェルセッションを開始
 

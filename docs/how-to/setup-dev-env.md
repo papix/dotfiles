@@ -33,17 +33,15 @@ bash setup.sh
 - 設定ファイルのシンボリックリンク作成
 - フォントのインストール
 
-### 2.5. Secret manager の secrets を用意する（推奨）
+### 2.5. ローカル secrets を用意する
 
-dotfiles は以下を既定値として `NPM_TOKEN` を参照できます。
+必要な secrets は `~/.zshenv.local` / `~/.zshrc.local` などの gitignore 対象ファイルか、OS 側の secret manager で管理してください。
 
-```text
-Vault: dotfiles
-Item: shared-env
-Field: NPM_TOKEN
+```bash
+export NPM_TOKEN="..."
 ```
 
-`config/bash_env.sh` / `config/claude_env.sh` で Secret manager CLI (`op`) の自動読込を使う場合は、`DOTFILES_SECRET_MANAGER_AUTOLOAD=1` を設定してください。Linux で CLI とデスクトップ連携を使う場合は、Secret manager for Linux と PolKit agent を別途用意してください。`op` が使えない、または自動読込を無効にしている場合は既存キャッシュとローカル環境変数へフォールバックします。
+`NPM_TOKEN` が未設定の場合は `gh auth token` から安全な権限で `XDG_CACHE_HOME` 配下にキャッシュします。
 
 ### 3. シェルの再起動
 
@@ -91,7 +89,7 @@ bin/lint-shell
 
 `bin/lint-shell` は `setup.sh`、`bin/`、`test/` の主要bashスクリプトと、tmux-powerlineセグメントを `shellcheck` で検証します。`shfmt` が利用可能な場合は、シェルスクリプトのフォーマットも確認します。
 
-`full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` と `secret-manager-cli` も導入します。
+`full` プロファイルの `setup.sh` は `shellcheck` に加えて `shfmt` も導入します。
 
 ## トラブルシューティング
 

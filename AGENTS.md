@@ -30,6 +30,6 @@
 - PRs target `main`. Include: change description, rationale, manual verification results, and impact scope (especially `setup.sh` or `config/`).
 
 ## Security & Configuration Tips
-- Store secrets in Secret manager when possible. The default lookup is `local-secret://example/NPM_TOKEN`, and shell-side autoload is opt-in via `DOTFILES_SECRET_MANAGER_AUTOLOAD=1`.
+- Keep secrets in gitignored local files or an OS/user secret manager, never in tracked files.
 - Keep `~/.zshrc.local` / `~/.zshenv.local` for machine-specific non-secret settings and last-resort local overrides.
 - Set permissions to `600` for important files, never output secrets in logs.
