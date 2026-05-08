@@ -232,8 +232,10 @@ assert_contains 'mem:' "$MEM_USED_SEGMENT"
 assert_contains '__format_mem_pct_fixed_width' "$MEM_USED_SEGMENT"
 assert_contains 'printf "%5.1f"' "$MEM_USED_SEGMENT"
 
-# 期待: dateセグメントは曜日+日付+時刻を1セグメントで表示する
+# 期待: dateセグメントはJST/UTCの月日+時刻を1セグメントで表示する
 assert_contains 'run_segment' "$DATE_COMPACT_SEGMENT"
-assert_contains '%a %F %H:%M' "$DATE_COMPACT_SEGMENT"
+assert_contains '%m/%d %H:%M' "$DATE_COMPACT_SEGMENT"
+assert_contains 'Asia/Tokyo' "$DATE_COMPACT_SEGMENT"
+assert_contains 'UTC' "$DATE_COMPACT_SEGMENT"
 
 echo "status_two_lines_test: ok"
