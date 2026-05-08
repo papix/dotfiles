@@ -94,21 +94,6 @@ function __dotfiles_write_secret_cache() {
     umask "$old_umask"
 }
 
-function __dotfiles_load_npm_token_from_secret-manager() {
-    local token=""
-    local token_cache=""
-
-    [[ -n "$COMMAND_CACHE[op]" ]] || return 1
-
-    token="$(op read "secret-ref://${DOTFILES_SECRET_MANAGER_VAULT:-dotfiles}/${DOTFILES_SECRET_MANAGER_ITEM:-shared-env}/NPM_TOKEN" 2>/dev/null)" || return 1
-    [[ -n "$token" ]] || return 1
-
-    export NPM_TOKEN="$token"
-    token_cache="$(__dotfiles_npm_token_cache_path)"
-    __dotfiles_write_secret_cache "$token_cache" "$token"
-    return 0
-}
-
 function __dotfiles_load_npm_token_from_cache() {
     local token_cache=""
 
@@ -145,8 +130,7 @@ function __dotfiles_refresh_npm_token_cache_from_gh() {
     return 0
 }
 
-# 対話シェル起動時に Secret manager 認証プロンプトを出さないよう、
-# zsh 起動では既存キャッシュ/gh auth token のみを使う
+# NPM_TOKEN はローカル環境変数を優先し、未設定時だけ gh auth token / cache を使う
 if [[ -z "$NPM_TOKEN" ]]; then
     __dotfiles_refresh_npm_token_cache_from_gh ||
         __dotfiles_load_npm_token_from_cache ||

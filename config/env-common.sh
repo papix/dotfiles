@@ -24,16 +24,6 @@ fi
 if [ -z "${XDG_STATE_HOME:-}" ]; then
     export XDG_STATE_HOME="$HOME/.local/state"
 fi
-if [ -z "${DOTFILES_SECRET_MANAGER_VAULT:-}" ]; then
-    export DOTFILES_SECRET_MANAGER_VAULT="dotfiles"
-fi
-if [ -z "${DOTFILES_SECRET_MANAGER_ITEM:-}" ]; then
-    export DOTFILES_SECRET_MANAGER_ITEM="shared-env"
-fi
-if [ -z "${DOTFILES_SECRET_MANAGER_AUTOLOAD:-}" ]; then
-    export DOTFILES_SECRET_MANAGER_AUTOLOAD="0"
-fi
-
 # anyenv の実行ファイルと shims を利用可能にする
 if [ -z "${ANYENV_ROOT:-}" ]; then
     export ANYENV_ROOT="$HOME/.anyenv"
@@ -103,22 +93,6 @@ dotfiles_write_secret_cache() {
     umask "$old_umask"
 }
 
-dotfiles_load_npm_token_from_secret-manager() {
-    if ! command -v op >/dev/null 2>&1; then
-        return 1
-    fi
-
-    token="$(op read "secret-ref://${DOTFILES_SECRET_MANAGER_VAULT}/${DOTFILES_SECRET_MANAGER_ITEM}/NPM_TOKEN" 2>/dev/null)" || return 1
-    [ -n "$token" ] || return 1
-
-    export NPM_TOKEN="$token"
-    dotfiles_write_secret_cache "$(dotfiles_npm_token_cache_path)" "$token"
-}
-
-dotfiles_should_autoload_secret-manager() {
-    [ "${DOTFILES_SECRET_MANAGER_AUTOLOAD:-0}" = "1" ]
-}
-
 dotfiles_load_npm_token_from_cache() {
     cache_file="$(dotfiles_npm_token_cache_path)"
     [ -f "$cache_file" ] || return 1
@@ -152,18 +126,11 @@ dotfiles_refresh_npm_token_cache_from_gh() {
     dotfiles_write_secret_cache "$cache_file" "$token"
 }
 
-# 起動のたびに認証プロンプトを出さないよう、Secret manager 自動読込は opt-in にする
+# NPM_TOKEN はローカル環境変数を優先し、未設定時だけ gh auth token / cache を使う
 if [ -z "${NPM_TOKEN:-}" ]; then
-    if dotfiles_should_autoload_secret-manager; then
-        dotfiles_load_npm_token_from_secret-manager ||
-            dotfiles_refresh_npm_token_cache_from_gh ||
-            dotfiles_load_npm_token_from_cache ||
-            true
-    else
-        dotfiles_refresh_npm_token_cache_from_gh ||
-            dotfiles_load_npm_token_from_cache ||
-            true
-    fi
+    dotfiles_refresh_npm_token_cache_from_gh ||
+        dotfiles_load_npm_token_from_cache ||
+        true
     [ -n "${NPM_TOKEN:-}" ] || dotfiles_load_npm_token_from_cache || true
 fi
 

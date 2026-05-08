@@ -29,8 +29,8 @@ assert_not_contains() {
 }
 
 # 期待: tree は早期 COMMAND_CACHE に含めない
-assert_contains 'tmux cmux peco ag gh op' "$INIT_FILE"
-assert_not_contains 'tmux cmux peco ag gh op tree' "$INIT_FILE"
+assert_contains 'tmux cmux peco ag gh' "$INIT_FILE"
+assert_not_contains 'tmux cmux peco ag gh tree' "$INIT_FILE"
 assert_not_contains 'gwq' "$INIT_FILE"
 
 # 期待: ~/.zshrc.alias はローカル互換用途として明記する
@@ -54,7 +54,6 @@ assert_contains "b64_payload=\$(base64 | tr -d '\\n')" "$FUNCTIONS_FILE"
 assert_not_contains 'setopt no_global_rcs' "$OPTIONS_FILE"
 assert_contains 'setopt no_global_rcs' "$ZSHENV_FILE"
 assert_contains 'export HISTFILE="${XDG_STATE_HOME}/zsh/history"' "$ZSHENV_FILE"
-assert_contains 'export DOTFILES_SECRET_MANAGER_VAULT="${DOTFILES_SECRET_MANAGER_VAULT:-dotfiles}"' "$ZSHENV_FILE"
 
 # 期待: pero は EDITOR を配列化して実行する
 assert_contains 'editor_cmd=(${(z)EDITOR})' "$PECO_FILE"

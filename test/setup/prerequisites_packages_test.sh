@@ -39,8 +39,6 @@ assert_contains 'brew "jq"' "$DARWIN_FULL"
 assert_contains 'brew "prek"' "$DARWIN_FULL"
 assert_contains 'brew "shfmt"' "$LINUX_FULL"
 assert_contains 'tap "manaflow-ai/cmux"' "$DARWIN_OS"
-assert_contains 'cask "secret-manager-cli"' "$DARWIN_OS"
 assert_contains 'cask "cmux"' "$DARWIN_OS"
-assert_contains 'cask "secret-manager-cli"' "$LINUX_OS"
 
 echo "prerequisites_packages_test: ok"

@@ -7,28 +7,6 @@ TMP_BIN="$TMP_HOME/.local/bin"
 trap 'rm -rf "$TMP_HOME"' EXIT
 mkdir -p "$TMP_BIN"
 
-cat >"$TMP_BIN/op" <<'EOF'
-#!/usr/bin/env sh
-if [ "$1" = "read" ] && [ "$2" = "secret-ref://dotfiles/shared-env/NPM_TOKEN" ]; then
-    printf 'token-from-secret-manager'
-    exit 0
-fi
-exit 1
-EOF
-chmod +x "$TMP_BIN/op"
-
-cat >"$TMP_BIN/gh" <<'EOF'
-#!/usr/bin/env sh
-printf 'token-from-gh'
-EOF
-chmod +x "$TMP_BIN/gh"
-
-cat >"$TMP_BIN/find" <<'EOF'
-#!/usr/bin/env sh
-exit 1
-EOF
-chmod +x "$TMP_BIN/find"
-
 # bash_env.sh と claude_env.sh が source する env-common.sh をテスト用 config に配置
 mkdir -p "$TMP_HOME/.config"
 cp "$ROOT_DIR/config/env-common.sh" "$TMP_HOME/.config/env-common.sh"
@@ -51,8 +29,7 @@ assert_path_starts_with() {
     local message="$3"
 
     case "$path_value" in
-    "$expected_prefix" | "$expected_prefix":*)
-        ;;
+    "$expected_prefix" | "$expected_prefix":*) ;;
     *)
         echo "ASSERTION FAILED: $message" >&2
         echo "actual path: $path_value" >&2
@@ -64,14 +41,12 @@ assert_path_starts_with() {
 run_posix_env_file() {
     local file="$1"
     local path_value="$2"
-    local autoload_value="${3:-0}"
 
-    env -i HOME="$TMP_HOME" PATH="$path_value" DOTFILES_SECRET_MANAGER_AUTOLOAD="$autoload_value" sh -c '
+    env -i HOME="$TMP_HOME" PATH="$path_value" sh -c '
         . "$1"
         printf "NPM_TOKEN=%s\n" "${NPM_TOKEN:-}"
         printf "XDG_CACHE_HOME=%s\n" "${XDG_CACHE_HOME:-}"
         printf "PATH=%s\n" "$PATH"
-        printf "DOTFILES_SECRET_MANAGER_AUTOLOAD=%s\n" "${DOTFILES_SECRET_MANAGER_AUTOLOAD:-}"
     ' sh "$file"
 }
 
@@ -96,20 +71,36 @@ for file in \
     "$ROOT_DIR/config/bash_env.sh" \
     "$ROOT_DIR/config/claude_env.sh"; do
     output="$(run_posix_env_file "$file" "/usr/bin:/bin")"
-    assert_contains "$output" 'NPM_TOKEN=' "$file should not prompt Secret manager by default"
-    assert_contains "$output" 'DOTFILES_SECRET_MANAGER_AUTOLOAD=0' "$file should default Secret manager autoload to opt-in"
+    assert_contains "$output" 'NPM_TOKEN=' "$file should not set NPM_TOKEN when gh and cache are unavailable"
     assert_contains "$output" "XDG_CACHE_HOME=$TMP_HOME/.cache" "$file should set XDG cache home"
     assert_contains "$output" "$TMP_HOME/.local/bin" "$file should add local bin"
     path_value="$(printf '%s\n' "$output" | awk -F= '/^PATH=/{print substr($0,6)}')"
     assert_path_starts_with "$path_value" "$TMP_HOME/.local/bin" "$file should prioritize local bin"
 
-    autoload_output="$(run_posix_env_file "$file" "/usr/bin:/bin" "1")"
-    assert_contains "$autoload_output" 'NPM_TOKEN=token-from-secret-manager' "$file should load NPM_TOKEN from Secret manager when autoload is enabled"
+done
+
+cat >"$TMP_BIN/gh" <<'EOF'
+#!/usr/bin/env sh
+printf 'token-from-gh'
+EOF
+chmod +x "$TMP_BIN/gh"
+
+cat >"$TMP_BIN/find" <<'EOF'
+#!/usr/bin/env sh
+exit 1
+EOF
+chmod +x "$TMP_BIN/find"
+
+for file in \
+    "$ROOT_DIR/config/bash_env.sh" \
+    "$ROOT_DIR/config/claude_env.sh"; do
+    gh_output="$(run_posix_env_file "$file" "/usr/bin:/bin")"
+    assert_contains "$gh_output" 'NPM_TOKEN=token-from-gh' "$file should refresh NPM_TOKEN cache via gh"
 done
 
 cache_file="$TMP_HOME/.cache/dotfiles/npm-token"
-if [[ "$(cat "$cache_file")" != 'token-from-secret-manager' ]]; then
-    echo "ASSERTION FAILED: expected Secret manager token cache to be written" >&2
+if [[ "$(cat "$cache_file")" != 'token-from-gh' ]]; then
+    echo "ASSERTION FAILED: expected gh token cache to be written" >&2
     exit 1
 fi
 
@@ -130,17 +121,15 @@ rm -f "$cache_file"
 zsh_output="$(env -i HOME="$TMP_HOME" PATH="/usr/bin:/bin" zsh -df -c '
     source "$1/config/zshenv"
     typeset -gA COMMAND_CACHE
-    COMMAND_CACHE[op]=1
     source "$1/config/zsh/10-env.zsh"
     printf "NPM_TOKEN=%s\n" "${NPM_TOKEN:-}"
 ' zsh "$ROOT_DIR")"
-assert_contains "$zsh_output" 'NPM_TOKEN=' 'zsh startup should not prompt Secret manager when cache is absent'
+assert_contains "$zsh_output" 'NPM_TOKEN=' 'zsh startup should not set NPM_TOKEN when gh and cache are unavailable'
 
 printf 'token-from-cache' >"$cache_file"
 zsh_cached_output="$(env -i HOME="$TMP_HOME" PATH="/usr/bin:/bin" zsh -df -c '
     source "$1/config/zshenv"
     typeset -gA COMMAND_CACHE
-    COMMAND_CACHE[op]=1
     source "$1/config/zsh/10-env.zsh"
     printf "NPM_TOKEN=%s\n" "${NPM_TOKEN:-}"
 ' zsh "$ROOT_DIR")"

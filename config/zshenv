@@ -47,7 +47,7 @@ export LESS='-FRX'
 export PERL_RL='EditLine'
 
 # Load local config (not tracked in git)
-# Use this file for machine-specific settings. Secrets should prefer Secret manager.
+# Use this file for machine-specific settings. Keep secrets out of this repository.
 if [[ -f "${HOME}/.zshenv.local" ]]; then
     source "${HOME}/.zshenv.local"
 fi
@@ -65,10 +65,6 @@ export DISABLE_TELEMETRY=true
 export DISABLE_ERROR_REPORTING=true
 export DISABLE_BUG_COMMAND=true
 export CLAUDE_ENV_FILE="${XDG_CONFIG_HOME}/claude_env.sh"
-
-export DOTFILES_SECRET_MANAGER_VAULT="${DOTFILES_SECRET_MANAGER_VAULT:-dotfiles}"
-export DOTFILES_SECRET_MANAGER_ITEM="${DOTFILES_SECRET_MANAGER_ITEM:-shared-env}"
-export DOTFILES_SECRET_MANAGER_AUTOLOAD="${DOTFILES_SECRET_MANAGER_AUTOLOAD:-0}"
 
 ########################################
 # Environment
