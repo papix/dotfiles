@@ -54,6 +54,8 @@ bash setup.sh
 
 - `vless <file...>`: nvim の閲覧専用モードで開き、外部更新時は自動で再読込します。
 - `work`: tmux または cmux 内で、Claude / Codex / shell の作業レイアウトを開きます。cmux 内では tmux を起動しません。
+- `wt`: git worktree を明示的に作成・表示・削除します。`wt new` は名前省略時に `worktree-YYYYmmdd-HHMMSS` 形式で自動命名します。`wt open` / `wt remove` は引数なしで peco 選択できます。cmux 内では worktree ごとに新しい workspace を開きます。
+- `Ctrl+B` / `Ctrl+Shift+B`: peco で branch / worktree を選んで切り替えます。
 
 ## 破壊的変更 (Breaking Changes)
 

@@ -173,8 +173,7 @@ fi
 
 # AIツール用ワークスペースを一発構築するコマンド
 # `work` 単体: peco + ghq でリポジトリを選択し、3分割ウィンドウで claude / codex を起動する
-# `work new <branch>`: 現在のリポジトリから worktree を作成し、その worktree を tmux/cmux で開く
-# `work prune`: 不要になった worktree を対話的に削除する
+# worktree 操作は明示的な `wt` コマンドに閉じ込める
 function __dotfiles_ai_command_line() {
     local command_name="$1"
     local args_value="${2:-}"
@@ -278,7 +277,7 @@ function work-select-repo() {
     ghq list --full-path | roots | grep -v "/.next" | peco --prompt 'AI WORKSPACE >' | head -n 1
 }
 
-function work-default-start-point() {
+function wt-default-start-point() {
     local default_branch
     default_branch="$(git-default-branch)"
 
@@ -294,8 +293,8 @@ function work-default-start-point() {
     echo "HEAD"
 }
 
-function work-remote-relative-path() {
-    local remote_url="$1"
+function wt-remote-relative-path() {
+    local remote_url="${1:-}"
     local normalized="${remote_url%.git}"
 
     case "$normalized" in
@@ -326,7 +325,7 @@ function work-remote-relative-path() {
     return 1
 }
 
-function work-repository-relative-path() {
+function wt-repository-relative-path() {
     local repo_root
     repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
 
@@ -338,12 +337,21 @@ function work-repository-relative-path() {
         echo "${repo_root#${ghq_root}/}"
         return 0
     fi
+    if [[ -n "$ghq_root" ]]; then
+        local repo_root_real ghq_root_real
+        repo_root_real="$(cd "$repo_root" 2>/dev/null && pwd -P)" || repo_root_real=""
+        ghq_root_real="$(cd "$ghq_root" 2>/dev/null && pwd -P)" || ghq_root_real=""
+        if [[ -n "$repo_root_real" && -n "$ghq_root_real" && "$repo_root_real" == "${ghq_root_real}"/* ]]; then
+            echo "${repo_root_real#${ghq_root_real}/}"
+            return 0
+        fi
+    fi
 
     local remote_url=""
     remote_url="$(git remote get-url origin 2>/dev/null || true)"
     if [[ -n "$remote_url" ]]; then
         local remote_path=""
-        remote_path="$(work-remote-relative-path "$remote_url" 2>/dev/null || true)"
+        remote_path="$(wt-remote-relative-path "$remote_url" 2>/dev/null || true)"
         if [[ -n "$remote_path" ]]; then
             echo "$remote_path"
             return 0
@@ -360,34 +368,161 @@ function work-repository-relative-path() {
     echo "local/$(basename "$repo_root")"
 }
 
-function work-worktree-root-path() {
-    local branch="$1"
+function wt-worktree-root-path() {
+    local branch="${1:-}"
     local worktree_base="${WORKTREE_BASE_DIR:-${HOME}/.worktrees}"
     local relative_path
-    relative_path="$(work-repository-relative-path)" || return 1
+    relative_path="$(wt-repository-relative-path)" || return 1
     echo "${worktree_base}/${relative_path}/${branch}"
 }
 
-function work-ensure-worktree() {
-    local branch="$1"
+function wt-generated-branch-name() {
+    local timestamp
+    timestamp="$(date +%Y%m%d-%H%M%S)" || return 1
+
+    local base="worktree-${timestamp}"
+    local candidate="$base"
+    local index=2
+
+    while true; do
+        local existing_worktree=""
+        existing_worktree="$(wt-existing-worktree-path "$candidate" 2>/dev/null || true)"
+
+        local worktree_root=""
+        worktree_root="$(wt-worktree-root-path "$candidate" 2>/dev/null || true)"
+
+        if ! git show-ref --verify --quiet "refs/heads/${candidate}" \
+            && ! git show-ref --verify --quiet "refs/remotes/origin/${candidate}" \
+            && [[ -z "$existing_worktree" ]] \
+            && [[ -z "$worktree_root" || ! -e "$worktree_root" ]]; then
+            print -r -- "$candidate"
+            return 0
+        fi
+
+        candidate="${base}-${index}"
+        (( index++ ))
+    done
+}
+
+function wt-existing-worktree-path() {
+    local branch="${1:-}"
+    local worktree_info
+    local worktree_path=""
+    local line=""
+
+    worktree_info="$(git worktree list --porcelain 2>/dev/null)" || return 1
+
+    while IFS= read -r line; do
+        case "$line" in
+            "worktree "*)
+                worktree_path="${line#worktree }"
+                ;;
+            "branch refs/heads/${branch}")
+                print -r -- "$worktree_path"
+                return 0
+                ;;
+            "")
+                worktree_path=""
+                ;;
+        esac
+    done <<< "$worktree_info"
+
+    return 1
+}
+
+function wt-target-path-for-worktree() {
+    local worktree_path="${1:-}"
+    local repo_prefix
+    repo_prefix="$(git rev-parse --show-prefix 2>/dev/null)" || return 1
+
+    local trimmed_worktree_path="${worktree_path%/}"
+    if [[ -n "$repo_prefix" ]]; then
+        local target_path="${trimmed_worktree_path}/${repo_prefix%/}"
+        if [[ -d "$target_path" ]]; then
+            print -r -- "$target_path"
+            return 0
+        fi
+    fi
+
+    if [[ -n "$trimmed_worktree_path" ]]; then
+        print -r -- "$trimmed_worktree_path"
+        return 0
+    fi
+
+    print -r -- "$worktree_path"
+}
+
+function wt-resolve-target() {
+    local target="${1:-}"
+
+    if [[ -d "$target" ]]; then
+        (
+            builtin cd -- "$target" >/dev/null 2>&1 && pwd -P
+        )
+        return $?
+    fi
+
+    local worktree_path=""
+    worktree_path="$(wt-existing-worktree-path "$target" 2>/dev/null || true)"
+    if [[ -n "$worktree_path" && -d "$worktree_path" ]]; then
+        wt-target-path-for-worktree "$worktree_path"
+        return $?
+    fi
+
+    return 1
+}
+
+function wt-open-target() {
+    local target_dir="${1:-}"
+    local workspace_name="${2:-}"
+
+    if [[ -z "$target_dir" || ! -d "$target_dir" ]]; then
+        echo "Error: worktree directory not found" >&2
+        return 1
+    fi
+
+    target_dir="$(
+        builtin cd -- "$target_dir" >/dev/null 2>&1 && pwd -P
+    )" || return 1
+    [[ -n "$workspace_name" ]] || workspace_name="$(basename "$target_dir")"
+
+    if is_inside_cmux; then
+        if ! command -v cmux >/dev/null 2>&1; then
+            echo "Error: cmux command not found" >&2
+            return 1
+        fi
+        command cmux new-workspace --name "$workspace_name" --cwd "$target_dir"
+        return $?
+    fi
+
+    if [[ -n "${TMUX:-}" ]]; then
+        command tmux new-window -n "$workspace_name" -c "$target_dir"
+        return $?
+    fi
+
+    builtin cd -- "$target_dir"
+}
+
+function wt-ensure-worktree() {
+    local branch="${1:-}"
     if [[ -z "$branch" ]]; then
-        echo "Usage: work new <branch>" >&2
+        echo "Usage: wt new [branch]" >&2
         return 1
     fi
     if ! inside-git-repository; then
-        echo "Error: work new must be run inside a git repository" >&2
+        echo "Error: wt new must be run inside a git repository" >&2
         return 1
     fi
 
     local existing_target=""
-    existing_target="$(__git_branch_target_path "$branch")"
+    existing_target="$(wt-resolve-target "$branch" 2>/dev/null || true)"
     if [[ -n "$existing_target" && -d "$existing_target" ]]; then
         echo "$existing_target"
         return 0
     fi
 
     local worktree_root=""
-    worktree_root="$(work-worktree-root-path "$branch")" || return 1
+    worktree_root="$(wt-worktree-root-path "$branch")" || return 1
     mkdir -p -- "$(dirname "$worktree_root")" || return 1
 
     if git show-ref --verify --quiet "refs/heads/${branch}"; then
@@ -396,14 +531,14 @@ function work-ensure-worktree() {
         git worktree add --track -b "$branch" "$worktree_root" "origin/${branch}" >&2 || return 1
     else
         local start_point=""
-        start_point="$(work-default-start-point)"
+        start_point="$(wt-default-start-point)"
         git worktree add -b "$branch" "$worktree_root" "$start_point" >&2 || return 1
     fi
 
-    __git_target_path_for_worktree "$worktree_root"
+    wt-target-path-for-worktree "$worktree_root"
 }
 
-function __work_managed_worktree_paths() {
+function __wt_managed_worktree_paths() {
     local worktree_base="${WORKTREE_BASE_DIR:-${HOME}/.worktrees}"
 
     [[ -d "$worktree_base" ]] || return 1
@@ -415,30 +550,21 @@ function __work_managed_worktree_paths() {
         | sort -u
 }
 
-function __work_candidate_main_repos() {
-    local repo_root=""
-    local -A seen_repos
+function __wt_select_managed_worktree() {
+    local prompt="${1:-WORKTREE >}"
 
-    if inside-git-repository; then
-        repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-        if [[ -n "$repo_root" ]]; then
-            seen_repos["$repo_root"]=1
-            print -r -- "$repo_root"
-        fi
+    if ! command -v peco >/dev/null 2>&1; then
+        echo "Error: peco command not found" >&2
+        return 1
     fi
 
-    if command -v ghq >/dev/null 2>&1; then
-        while IFS= read -r repo_root; do
-            [[ -n "$repo_root" ]] || continue
-            [[ -z "${seen_repos[$repo_root]:-}" ]] || continue
-            seen_repos["$repo_root"]=1
-            print -r -- "$repo_root"
-        done < <(ghq list --full-path 2>/dev/null || true)
-    fi
+    local selected_worktree=""
+    selected_worktree="$({ __wt_managed_worktree_paths 2>/dev/null || true; } | peco --prompt "$prompt")" || return 1
+    print -r -- "${selected_worktree%%$'\n'*}"
 }
 
-function __work_main_worktree_for_path() {
-    local worktree_path="$1"
+function __wt_main_worktree_for_path() {
+    local worktree_path="${1:-}"
     local common_dir=""
 
     common_dir="$(git -C "$worktree_path" rev-parse --git-common-dir 2>/dev/null)" || return 1
@@ -447,62 +573,177 @@ function __work_main_worktree_for_path() {
     )
 }
 
-function __work_prune_metadata_for_repo() {
-    local repo_root="$1"
-    shift
-
-    [[ -n "$repo_root" && -d "$repo_root" ]] || return 1
-    git -C "$repo_root" worktree prune "$@"
-}
-
-function work-new() {
-    local branch="$1"
-    local target_dir=""
-    target_dir="$(work-ensure-worktree "$branch")" || return 1
-
-    if [[ -n "${TMUX:-}" ]]; then
-        work-open-window "$target_dir"
-        return $?
+function wt-new() {
+    local branch="${1:-}"
+    if [[ -z "$branch" ]]; then
+        if ! inside-git-repository; then
+            echo "Error: wt new must be run inside a git repository" >&2
+            return 1
+        fi
+        branch="$(wt-generated-branch-name)" || return 1
     fi
 
-    builtin cd -- "$target_dir"
+    local target_dir=""
+    target_dir="$(wt-ensure-worktree "$branch")" || return 1
+
+    wt-open-target "$target_dir" "$branch"
 }
 
-function work-prune() {
-    case "${1:-}" in
-        stale)
-            shift
-            local repo_root=""
+function wt-open() {
+    local target="${1:-}"
+    local target_dir=""
 
-            while IFS= read -r repo_root; do
-                [[ -n "$repo_root" ]] || continue
-                __work_prune_metadata_for_repo "$repo_root" --verbose "$@" || return 1
-            done < <(__work_candidate_main_repos)
+    if [[ -n "$target" ]]; then
+        target_dir="$(wt-resolve-target "$target")" || {
+            echo "Error: worktree not found: $target" >&2
+            return 1
+        }
+        if [[ -d "$target" ]]; then
+            target="$(basename "$target_dir")"
+        fi
+    else
+        target_dir="$(__wt_select_managed_worktree 'WORKTREE OPEN >')" || return 1
+        if [[ -z "$target_dir" ]]; then
+            return 0
+        fi
+        target="$(basename "$target_dir")"
+    fi
+
+    wt-open-target "$target_dir" "$target"
+}
+
+function git-switch-worktree() {
+    local target="${1:-}"
+    if [[ -z "$target" ]]; then
+        echo "Usage: git-switch-worktree <branch|path>" >&2
+        return 1
+    fi
+
+    wt-open "$target"
+}
+
+function peco-worktree() {
+    local selected_worktree=""
+    selected_worktree="$(__wt_select_managed_worktree 'WORKTREE >')" || return 1
+    [[ -n "$selected_worktree" ]] || return 0
+
+    if [[ -n "${BUFFER:-}" ]]; then
+        local cmd="${BUFFER% }"
+        BUFFER="${cmd} ${(q)selected_worktree}"
+        CURSOR="${#BUFFER}"
+        return 0
+    fi
+
+    local switch_output
+    switch_output="$(git-switch-worktree "$selected_worktree" 2>&1)"
+    local exit_code=$?
+
+    if [[ "$exit_code" -eq 0 ]]; then
+        zle reset-prompt
+    else
+        zle -M "$switch_output"
+        zle reset-prompt
+    fi
+    return "$exit_code"
+}
+zle -N peco-worktree
+
+# Ctrl+Shift+B。端末ごとに届くシーケンスが異なるため主要な形式を受ける。
+bindkey '^[[66;6u' peco-worktree
+bindkey '^[[98;6u' peco-worktree
+bindkey '^[[27;6;66~' peco-worktree
+bindkey '^[[27;6;98~' peco-worktree
+
+function wt-list() {
+    if ! inside-git-repository; then
+        echo "Error: wt list must be run inside a git repository" >&2
+        return 1
+    fi
+
+    git worktree list "$@"
+}
+
+function wt-remove() {
+    local target="${1:-}"
+    shift || true
+    local target_dir=""
+
+    if [[ -n "$target" ]]; then
+        target_dir="$(wt-resolve-target "$target")" || {
+            echo "Error: worktree not found: $target" >&2
+            return 1
+        }
+    else
+        target_dir="$(__wt_select_managed_worktree 'WORKTREE REMOVE >')" || return 1
+        if [[ -z "$target_dir" ]]; then
+            return 0
+        fi
+    fi
+
+    local main_worktree=""
+    main_worktree="$(__wt_main_worktree_for_path "$target_dir")" || return 1
+    git -C "$main_worktree" worktree remove "$@" "$target_dir"
+}
+
+function wt-prune() {
+    if ! inside-git-repository; then
+        echo "Error: wt prune must be run inside a git repository" >&2
+        return 1
+    fi
+
+    case "${1:-}" in
+        ""|stale)
+            [[ $# -gt 0 ]] && shift
+            git worktree prune --verbose "$@"
             ;;
         expired)
             shift
-            local repo_root=""
-
-            while IFS= read -r repo_root; do
-                [[ -n "$repo_root" ]] || continue
-                __work_prune_metadata_for_repo "$repo_root" --expire now --verbose "$@" || return 1
-            done < <(__work_candidate_main_repos)
+            git worktree prune --expire now --verbose "$@"
             ;;
         *)
-            if ! command -v peco >/dev/null 2>&1; then
-                echo "Error: peco command not found" >&2
-                return 1
-            fi
+            git worktree prune "$@"
+            ;;
+    esac
+}
 
-            local selected_worktree=""
-            selected_worktree="$(__work_managed_worktree_paths | peco --prompt 'WORKTREE REMOVE >' | head -n 1)"
-            if [[ -z "$selected_worktree" ]]; then
-                return 0
-            fi
+function wt-help() {
+    echo "Usage:"
+    echo "  wt new [branch]          Create or reuse a worktree and open it"
+    echo "  wt open [branch|path]    Open an existing worktree"
+    echo "  wt list                  List git worktrees"
+    echo "  wt remove [branch|path]  Remove a worktree"
+    echo "  wt prune [stale|expired] Prune stale worktree metadata"
+}
 
-            local main_worktree=""
-            main_worktree="$(__work_main_worktree_for_path "$selected_worktree")" || return 1
-            git -C "$main_worktree" worktree remove "$@" "$selected_worktree"
+function wt() {
+    case "${1:-}" in
+        new)
+            shift
+            wt-new "$@"
+            ;;
+        open)
+            shift
+            wt-open "$@"
+            ;;
+        list|ls)
+            shift
+            wt-list "$@"
+            ;;
+        remove|rm)
+            shift
+            wt-remove "$@"
+            ;;
+        prune)
+            shift
+            wt-prune "$@"
+            ;;
+        help|-h|--help)
+            wt-help
+            ;;
+        *)
+            echo "Error: unknown subcommand: ${1:-}" >&2
+            wt-help >&2
+            return 1
             ;;
     esac
 }
@@ -510,10 +751,7 @@ function work-prune() {
 function work-help() {
     echo "Usage:"
     echo "  work                Open a repo picker and launch the AI workspace in tmux or cmux"
-    echo "  work new <branch>   Create or reuse a worktree and open it"
-    echo "  work prune          Remove managed worktrees interactively"
-    echo "  work prune stale    Clean stale worktree metadata"
-    echo "  work prune expired  Expire stale worktree metadata immediately"
+    echo "  wt <subcommand>     Manage git worktrees explicitly"
 }
 
 function work() {
@@ -525,14 +763,6 @@ function work() {
                 return 0
             fi
             work-open-window "$selected_repo"
-            ;;
-        new)
-            shift
-            work-new "$@"
-            ;;
-        prune)
-            shift
-            work-prune "$@"
             ;;
         help|-h|--help)
             work-help

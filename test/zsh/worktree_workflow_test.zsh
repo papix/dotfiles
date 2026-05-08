@@ -27,6 +27,13 @@ function assert_file_exists() {
     fi
 }
 
+function real_path() {
+    local path="$1"
+    (
+        builtin cd -- "$path" >/dev/null 2>&1 && pwd -P
+    )
+}
+
 function assert_not_contains() {
     local needle="$1"
     local haystack="$2"
@@ -52,10 +59,15 @@ function assert_contains() {
 }
 
 function zle() { return 0 }
-function bindkey() { return 0 }
+function bindkey() {
+    printf '%s\n' "${(j:\t:)@}" >> "$BINDKEY_MOCK_LOG"
+}
+function peco() { cat }
 
 export HOME="$TMP_DIR/home"
 mkdir -p "$HOME/.ghq/github.com/papix/example-repo"
+BINDKEY_MOCK_LOG="$TMP_DIR/bindkey.log"
+: > "$BINDKEY_MOCK_LOG"
 
 repo_path="$HOME/.ghq/github.com/papix/example-repo"
 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git -C "$repo_path" init -q
@@ -89,23 +101,68 @@ function ghq() {
 source "$ROOT_DIR/config/zsh/81-git.zsh"
 source "$ROOT_DIR/config/zsh/82-tmux.zsh"
 
-for fn in work work-new work-prune work-ensure-worktree work-worktree-root-path; do
+for fn in work wt wt-new wt-open wt-remove wt-prune wt-worktree-root-path git-switch-worktree peco-worktree; do
     if ! typeset -f "$fn" >/dev/null 2>&1; then
         echo "ASSERTION FAILED: expected function ${fn} to be defined" >&2
         exit 1
     fi
 done
 
-cd "$repo_path"
-target_path="$(work-worktree-root-path feature-foo)"
-expected_path="$HOME/.worktrees/github.com/papix/example-repo/feature-foo"
-assert_eq "$expected_path" "$target_path" "work-worktree-root-path should use WORKTREE_BASE_DIR fallback with ghq path"
+if typeset -f work-new >/dev/null 2>&1 || typeset -f work-prune >/dev/null 2>&1; then
+    echo "ASSERTION FAILED: work should not expose worktree subcommands" >&2
+    exit 1
+fi
 
-work-new feature-foo >/dev/null 2>&1
-assert_eq "$expected_path" "$PWD" "work-new should cd into the created worktree outside tmux"
-assert_file_exists "$expected_path/.git" "work-new should create a linked worktree"
+bindkey_invocations="$(cat "$BINDKEY_MOCK_LOG")"
+assert_contains "^[[66;6u\\tpeco-worktree" "$bindkey_invocations" "Ctrl+Shift+B CSI-u should be bound to peco-worktree"
+assert_contains "^[[27;6;66~\\tpeco-worktree" "$bindkey_invocations" "Ctrl+Shift+B modifyOtherKeys should be bound to peco-worktree"
+
+cd "$repo_path"
+target_path="$(wt-worktree-root-path feature-foo)"
+expected_path="$HOME/.worktrees/github.com/papix/example-repo/feature-foo"
+assert_eq "$expected_path" "$target_path" "wt-worktree-root-path should use WORKTREE_BASE_DIR fallback with ghq path"
+
+wt new feature-foo >/dev/null 2>&1
+assert_file_exists "$expected_path/.git" "wt new should create a linked worktree"
+expected_real_path="$(real_path "$expected_path")"
+assert_eq "$expected_real_path" "$PWD" "wt new should cd into the created worktree outside tmux/cmux"
 current_branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
-assert_eq "feature-foo" "$current_branch" "work-new should check out the requested branch inside the new worktree"
+assert_eq "feature-foo" "$current_branch" "wt new should check out the requested branch inside the new worktree"
+
+cd "$repo_path"
+git-switch-worktree feature-foo >/dev/null 2>&1
+assert_eq "$expected_real_path" "$PWD" "git-switch-worktree should open the selected worktree"
+
+cd "$repo_path"
+function date() {
+    if [[ "${1:-}" == "+%Y%m%d-%H%M%S" ]]; then
+        print -r -- "20260102-030405"
+        return 0
+    fi
+
+    command date "$@"
+}
+
+wt new >/dev/null 2>&1
+auto_branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+auto_path="$HOME/.worktrees/github.com/papix/example-repo/worktree-20260102-030405"
+auto_real_path="$(real_path "$auto_path")"
+assert_eq "worktree-20260102-030405" "$auto_branch" "wt new without args should generate a worktree name"
+assert_file_exists "$auto_path/.git" "wt new without args should create a linked worktree"
+assert_eq "$auto_real_path" "$PWD" "wt new without args should cd into the generated worktree"
+
+cd "$repo_path"
+wt new >/dev/null 2>&1
+auto_branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+auto_path="$HOME/.worktrees/github.com/papix/example-repo/worktree-20260102-030405-2"
+auto_real_path="$(real_path "$auto_path")"
+assert_eq "worktree-20260102-030405-2" "$auto_branch" "wt new without args should avoid generated name conflicts"
+assert_file_exists "$auto_path/.git" "wt new without args should create a uniquely named worktree"
+assert_eq "$auto_real_path" "$PWD" "wt new without args should cd into the uniquely named worktree"
+
+unfunction date
+
+cd "$repo_path"
 
 tmp_bin="$TMP_DIR/bin"
 mkdir -p "$tmp_bin"
@@ -114,15 +171,7 @@ cat >"$tmp_bin/cmux" <<'EOF'
 set -euo pipefail
 
 printf '%s\n' "$*" >> "$CMUX_LOG"
-
-case "${1:-}" in
-    new-workspace)
-        printf 'OK workspace:7\n'
-        ;;
-    *)
-        printf 'OK\n'
-        ;;
-esac
+printf 'OK workspace:7\n'
 EOF
 chmod +x "$tmp_bin/cmux"
 
@@ -133,13 +182,37 @@ export CMUX_WORKSPACE_ID="workspace:1"
 export CMUX_SURFACE_ID="surface:1"
 : >"$CMUX_LOG"
 
-work-open-window "$repo_path" >/dev/null 2>&1
+wt open feature-foo >/dev/null 2>&1
 cmux_invocations="$(cat "$CMUX_LOG")"
-assert_contains "new-workspace --cwd $repo_path --command exec claude" "$cmux_invocations" "work-open-window should create a cmux workspace inside cmux"
-assert_contains "new-split right --workspace workspace:7" "$cmux_invocations" "work-open-window should use cmux split API inside cmux"
-assert_contains "send --workspace workspace:7 cd ${(q)repo_path}\\nexec codex\\n" "$cmux_invocations" "work-open-window should launch codex via cmux"
-assert_not_contains "tmux" "$cmux_invocations" "work-open-window should not call tmux inside cmux"
-assert_not_contains "dangerously" "$cmux_invocations" "work-open-window should not hard-code unsafe AI flags"
+assert_contains "new-workspace --name feature-foo --cwd $expected_real_path" "$cmux_invocations" "wt open should create a plain cmux workspace for the worktree"
+assert_not_contains "claude" "$cmux_invocations" "wt open should not launch AI tools implicitly"
+assert_not_contains "codex" "$cmux_invocations" "wt open should not launch AI tools implicitly"
+
+function peco() {
+    local candidate=""
+    while IFS= read -r candidate; do
+        if [[ "$candidate" == "$expected_path" ]]; then
+            print -r -- "$candidate"
+            return 0
+        fi
+    done
+    return 0
+}
+
+: >"$CMUX_LOG"
+wt open >/dev/null 2>&1
+cmux_invocations="$(cat "$CMUX_LOG")"
+assert_contains "new-workspace --name feature-foo --cwd $expected_real_path" "$cmux_invocations" "wt open without args should select a worktree with peco"
+
+BUFFER=""
+CURSOR=0
+: >"$CMUX_LOG"
+peco-worktree >/dev/null 2>&1
+cmux_invocations="$(cat "$CMUX_LOG")"
+assert_contains "new-workspace --name feature-foo --cwd $expected_real_path" "$cmux_invocations" "peco-worktree should open the selected worktree"
+
+unfunction peco
+function peco() { cat }
 
 export PATH="$old_path"
 unset CMUX_LOG
@@ -154,9 +227,9 @@ if [[ "$before_prune" != *"$expected_path"* ]]; then
     exit 1
 fi
 
-work-prune stale >/dev/null 2>&1
+wt prune stale >/dev/null 2>&1
 
 after_prune="$(git -C "$repo_path" worktree list --porcelain)"
-assert_not_contains "$expected_path" "$after_prune" "work-prune stale should remove metadata for deleted linked worktrees"
+assert_not_contains "$expected_path" "$after_prune" "wt prune stale should remove metadata for deleted linked worktrees"
 
 echo "worktree_workflow_test: ok"
