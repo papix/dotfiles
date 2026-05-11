@@ -34,7 +34,7 @@ bash setup.sh
 | 変数 | 説明 |
 |------|------|
 | `ALLOW_HOMEBREW_INSTALL=1` | Homebrew 公式インストーラの実行を許可（Linux） |
-| `DISABLE_AUTO_TMUX=1` | tmux 自動起動を無効化 |
+| `DISABLE_AUTO_TMUX=1` | Linux の tmux 自動起動を無効化 |
 | `DOTFILES_CLAUDE_ARGS` | `work` が起動する `claude` へ渡す追加引数 |
 | `DOTFILES_CODEX_ARGS` | `work` が起動する `codex` へ渡す追加引数 |
 

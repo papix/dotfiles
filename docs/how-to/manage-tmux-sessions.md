@@ -2,7 +2,7 @@
 
 ## 概要
 
-このプロジェクトでは、ghqで管理されているリポジトリごとに自動的にtmuxセッションを作成・管理します。
+このプロジェクトでは、Linux のローカルターミナルで ghq 管理下のリポジトリごとに tmux セッションを自動作成・管理します。
 
 macOS で cmux を使っている場合は、cmux のワークスペースとペインを優先します。cmux 内では tmux の自動起動と `tmux` ラッパーを無効化し、`work` は cmux の新規ワークスペースを作成します。
 
@@ -17,7 +17,7 @@ macOS で cmux を使っている場合は、cmux のワークスペースとペ
 ~/.ghq/gitlab.com/org/project → gitlab-com-org-project
 ```
 
-### 自動起動の仕組み
+### Linuxでの自動起動の仕組み
 
 1. 新しいターミナルを開く
 2. 現在のディレクトリがghq管理下かチェック
@@ -73,7 +73,7 @@ Ctrl-q q/Q    surface/workspaceを閉じる
 Ctrl-q V      cmux copy mode
 ```
 
-### 自動起動を無効化
+### Linuxでの自動起動を無効化
 
 特定の環境で自動起動を無効にする：
 

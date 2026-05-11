@@ -26,7 +26,7 @@ git clone git@github.com:papix/dotfiles.git ~/.ghq/github.com/papix/dotfiles
 cd ~/.ghq/github.com/papix/dotfiles
 bash setup.sh
 
-# Disable tmux auto-start
+# Disable Linux tmux auto-start
 export DISABLE_AUTO_TMUX=1
 ```
 

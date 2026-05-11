@@ -119,10 +119,10 @@ function resolve_tmux_session_name() {
 
 function should_auto_start_tmux() {
     [[ -z "${DISABLE_AUTO_TMUX:-}" ]] || return 1
+    [[ "$OSTYPE" == linux* ]] || return 1
     [[ -z "${TMUX:-}" ]] || return 1
     ! is_inside_cmux || return 1
     [[ -z "${SSH_CONNECTION:-}" ]] || return 1
-    [[ "${TERM_PROGRAM:-}" == "iTerm.app" ]] || return 1
     [[ -z "${VSCODE_INJECTION:-}" ]] || return 1
     [[ -n "${COMMAND_CACHE[tmux]:-}" ]] || return 1
     return 0
@@ -146,8 +146,8 @@ function auto_start_tmux_session() {
     fi
 }
 
-# tmuxの自動起動（iTerm2限定、cmux/SSH経由では無効、環境変数で無効化可能）
-# 条件: iTerm2 && !cmux && !SSH && !VSCode && !Cursor && !tmux内 && !DISABLE_AUTO_TMUX && tmuxコマンド存在
+# tmuxの自動起動（Linux限定、cmux/SSH経由では無効、環境変数で無効化可能）
+# 条件: Linux && !cmux && !SSH && !VSCode && !Cursor && !tmux内 && !DISABLE_AUTO_TMUX && tmuxコマンド存在
 if should_auto_start_tmux; then
     auto_start_tmux_session
 fi

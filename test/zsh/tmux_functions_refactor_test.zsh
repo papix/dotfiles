@@ -82,12 +82,19 @@ export CMUX_SURFACE_ID="surface:1"
 assert_eq "0" "$({ is_inside_cmux && echo 0 || echo 1; })" "is_inside_cmux should require cmux workspace and surface ids"
 
 COMMAND_CACHE[tmux]=1
-export TERM_PROGRAM="iTerm.app"
+OSTYPE="linux-gnu"
 assert_eq "1" "$({ should_auto_start_tmux && echo 0 || echo 1; })" "tmux auto-start should be disabled inside cmux"
 
 unset CMUX_WORKSPACE_ID
 unset CMUX_SURFACE_ID
-unset TERM_PROGRAM
+unset 'COMMAND_CACHE[tmux]'
+
+COMMAND_CACHE[tmux]=1
+OSTYPE="darwin24.0.0"
+assert_eq "1" "$({ should_auto_start_tmux && echo 0 || echo 1; })" "tmux auto-start should be disabled on macOS"
+
+OSTYPE="linux-gnu"
+assert_eq "0" "$({ should_auto_start_tmux && echo 0 || echo 1; })" "tmux auto-start should be enabled on Linux when other guards pass"
 unset 'COMMAND_CACHE[tmux]'
 
 function tmux() {

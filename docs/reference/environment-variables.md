@@ -5,7 +5,7 @@
 ### `DISABLE_AUTO_TMUX`
 - **型**: boolean (1/0)
 - **デフォルト**: 0
-- **説明**: tmuxの自動起動を無効化
+- **説明**: Linux の tmux 自動起動を無効化
 - **使用例**: `export DISABLE_AUTO_TMUX=1`
 
 ### `DISABLE_OSC52`

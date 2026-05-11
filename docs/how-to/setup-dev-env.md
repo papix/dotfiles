@@ -70,7 +70,7 @@ alias myproject="cd ~/projects/myproject"
 重要な環境変数：
 
 ```bash
-# tmux自動起動の無効化
+# Linuxのtmux自動起動の無効化
 export DISABLE_AUTO_TMUX=1
 
 # エディタの設定
